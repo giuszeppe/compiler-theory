@@ -54,8 +54,12 @@ func (t TokenType) String() string {
 		return "LeftCurly"
 	case RightCurly:
 		return "RightCurly"
-    case RelOp:
-        return "RelOp"
+	case RelOp:
+		return "RelOp"
+	case LeftArrow:
+		return "LeftArrow"
+	case Comma:
+		return "Comma"
 	default:
 		return "Unknown"
 	}
@@ -80,6 +84,7 @@ const (
 	LeftCurly
 
 	RelOp
+	Comma
 
 	// Keywords (not in the count)
 	Return
@@ -129,9 +134,11 @@ func NewLexer() Lexer {
 			"lc",
 			"rc",
 			"relop",
+			"comma",
+            "hash",
 		},
-		StateList:  []int{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13},
-		StatesAccp: []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13},
+		StateList:  []int{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14},
+		StatesAccp: []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14},
 	}
 	lexer.Rows = len(lexer.StateList)
 	lexer.Cols = len(lexer.LexemeList)
@@ -164,13 +171,12 @@ func (l *Lexer) initialiseTable() {
 	l.Tx[0][slices.Index(l.LexemeList, "op")] = 7
 	l.Tx[7][slices.Index(l.LexemeList, "eq")] = 7
 
-
 	l.Tx[0][slices.Index(l.LexemeList, "digit")] = 8
 	l.Tx[8][slices.Index(l.LexemeList, "digit")] = 8
 
 	l.Tx[0][slices.Index(l.LexemeList, "colon")] = 9
 
-	l.Tx[0][slices.Index(l.LexemeList, "leftArrow")] = 10
+	l.Tx[7][slices.Index(l.LexemeList, "relop")] = 10
 
 	l.Tx[0][slices.Index(l.LexemeList, "lc")] = 11
 	l.Tx[0][slices.Index(l.LexemeList, "rc")] = 12
@@ -178,6 +184,8 @@ func (l *Lexer) initialiseTable() {
 	l.Tx[0][slices.Index(l.LexemeList, "relop")] = 13
 	l.Tx[3][slices.Index(l.LexemeList, "eq")] = 13
 	l.Tx[13][slices.Index(l.LexemeList, "eq")] = 13
+
+	l.Tx[0][slices.Index(l.LexemeList, "comma")] = 14
 }
 
 func (l *Lexer) isAcceptingState(state int) bool {
@@ -244,13 +252,17 @@ func (l *Lexer) getTokenTypeByFinalState(state int, lexeme string) Token {
 	} else if state == 9 {
 		return Token{Colon, lexeme}
 	} else if state == 10 {
-		return Token{LeftArrow, lexeme}
+		if lexeme == "->" {
+			return Token{LeftArrow, lexeme}
+		}
 	} else if state == 11 {
 		return Token{LeftCurly, lexeme}
 	} else if state == 12 {
 		return Token{RightCurly, lexeme}
 	} else if state == 13 {
 		return Token{RelOp, lexeme}
+	} else if state == 14 {
+		return Token{Comma, lexeme}
 	}
 	return Token{Error, lexeme}
 }
@@ -294,11 +306,12 @@ func (l *Lexer) catChar(ch byte) string {
 		return "rc"
 	case ch == '<' || ch == '>' || ch == '!':
 		return "relop"
+	case ch == ',':
+		return "comma"
 	default:
 		return "other"
 	}
 }
-
 
 func (l *Lexer) NextToken(src string, idx int) (Token, string) {
 	state := 0
@@ -386,10 +399,9 @@ func isAlpha(ch byte) bool {
 
 func main() {
 	lexer := NewLexer()
-    source := "+= -= *= /="
+	source := "->"
 	tokens := lexer.GenerateTokens(source)
 	for _, tok := range tokens {
 		fmt.Printf("Token: %-10v Lexeme: %q\n", tok.Type.String(), tok.Lexeme)
 	}
-
 }
