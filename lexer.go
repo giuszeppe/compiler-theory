@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"slices"
-	"strings"
 )
 
 type Token struct {
@@ -13,18 +12,90 @@ type Token struct {
 
 type TokenType int
 
+func (t TokenType) String() string {
+	switch t {
+	case Identifier:
+		return "Identifier"
+	case Integer:
+		return "Integer"
+	case Whitespace:
+		return "Whitespace"
+	case Equals:
+		return "Equals"
+	case Semicolon:
+		return "Semicolon"
+	case LeftParen:
+		return "LeftParen"
+	case RightParen:
+		return "RightParen"
+	case Return:
+		return "Return"
+	case Operator:
+		return "Operator"
+	case Let:
+		return "Let"
+	case Error:
+		return "Error"
+	case End:
+		return "End"
+	case As:
+		return "As"
+	case Colon:
+		return "Colon"
+	case IntType:
+		return "IntType"
+	case BoolType:
+		return "BoolType"
+	case ColourType:
+		return "ColourType"
+	case FloatType:
+		return "FloatType"
+	case LeftCurly:
+		return "LeftCurly"
+	case RightCurly:
+		return "RightCurly"
+    case RelOp:
+        return "RelOp"
+	default:
+		return "Unknown"
+	}
+}
+
 const (
 	Identifier TokenType = iota + 1
 	Integer
 	Whitespace
+	// Op
 	Equals
+	// Syntax
 	Semicolon
+	LeftParen
+	RightParen
+
+	Operator
+	Colon
+	LeftArrow
+
+	RightCurly
+	LeftCurly
+
+	RelOp
+
+	// Keywords (not in the count)
+	Return
+	Let
 	Error
 	End
-	For
-	If
-	Else
-	While
+
+	// Type
+	IntType
+	FloatType
+	BoolType
+	ColourType
+	As
+
+	True
+	False
 )
 
 func NewToken(t TokenType, lexeme string) Token {
@@ -49,10 +120,18 @@ func NewLexer() Lexer {
 			"ws",
 			"eq",
 			"sc",
+			"lp",
+			"rp",
+			"op",
 			"other",
+			"colon",
+			"leftArrow",
+			"lc",
+			"rc",
+			"relop",
 		},
-		StateList:  []int{0, 1, 2, 3, 4, 5},
-		StatesAccp: []int{1, 2, 3, 4, 5},
+		StateList:  []int{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13},
+		StatesAccp: []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13},
 	}
 	lexer.Rows = len(lexer.StateList)
 	lexer.Cols = len(lexer.LexemeList)
@@ -65,10 +144,6 @@ func NewLexer() Lexer {
 		}
 	}
 	lexer.initialiseTable()
-	fmt.Println("TABLE")
-	for i := 0; i < lexer.Rows; i++ {
-		fmt.Println(lexer.Tx[i])
-	}
 	return lexer
 }
 
@@ -78,73 +153,152 @@ func (l *Lexer) initialiseTable() {
 	l.Tx[1][slices.Index(l.LexemeList, "letter")] = 1
 	l.Tx[1][slices.Index(l.LexemeList, "digit")] = 1
 
-	//White Space
 	l.Tx[0][slices.Index(l.LexemeList, "ws")] = 2
 	l.Tx[2][slices.Index(l.LexemeList, "ws")] = 2
 
-	//Eq sign (=)
 	l.Tx[0][slices.Index(l.LexemeList, "eq")] = 3
+	l.Tx[0][slices.Index(l.LexemeList, "sc")] = 4
+	l.Tx[0][slices.Index(l.LexemeList, "lp")] = 5
+	l.Tx[0][slices.Index(l.LexemeList, "rp")] = 6
 
-	//Integers
-	l.Tx[0][slices.Index(l.LexemeList, "digit")] = 4
-	l.Tx[4][slices.Index(l.LexemeList, "digit")] = 4
+	l.Tx[0][slices.Index(l.LexemeList, "op")] = 7
+	l.Tx[7][slices.Index(l.LexemeList, "eq")] = 7
 
-	//Semicolon sign (;)
-	l.Tx[0][slices.Index(l.LexemeList, "sc")] = 5
+
+	l.Tx[0][slices.Index(l.LexemeList, "digit")] = 8
+	l.Tx[8][slices.Index(l.LexemeList, "digit")] = 8
+
+	l.Tx[0][slices.Index(l.LexemeList, "colon")] = 9
+
+	l.Tx[0][slices.Index(l.LexemeList, "leftArrow")] = 10
+
+	l.Tx[0][slices.Index(l.LexemeList, "lc")] = 11
+	l.Tx[0][slices.Index(l.LexemeList, "rc")] = 12
+
+	l.Tx[0][slices.Index(l.LexemeList, "relop")] = 13
+	l.Tx[3][slices.Index(l.LexemeList, "eq")] = 13
+	l.Tx[13][slices.Index(l.LexemeList, "eq")] = 13
 }
 
 func (l *Lexer) isAcceptingState(state int) bool {
 	return slices.Index(l.StatesAccp, state) != -1
 }
 
+func getKeywordTokenByLexeme(lexeme string) (Token, bool) {
+	switch lexeme {
+	case "return":
+		return Token{Return, lexeme}, true
+	case "let":
+		return Token{Let, lexeme}, true
+	case "as":
+		return Token{As, lexeme}, true
+	case "true":
+		return Token{True, lexeme}, true
+	case "false":
+		return Token{False, lexeme}, true
+	default:
+		return Token{}, false
+	}
+}
+
+func getTypeTokenByLexeme(lexeme string) (Token, bool) {
+	switch lexeme {
+	case "colour":
+		return Token{ColourType, lexeme}, true
+	case "int":
+		return Token{IntType, lexeme}, true
+	case "bool":
+		return Token{BoolType, lexeme}, true
+	case "float":
+		return Token{FloatType, lexeme}, true
+	default:
+		return Token{}, false
+	}
+}
+
 func (l *Lexer) getTokenTypeByFinalState(state int, lexeme string) Token {
 	if state == 1 {
-		token, err := getKeywordTokenByLexeme(lexeme)
-		if err == nil {
-			return token
+		tok, ok := getKeywordTokenByLexeme(lexeme)
+		if ok {
+			return tok
 		}
-		return Token{Type: Identifier, Lexeme: lexeme}
+		tok, ok = getTypeTokenByLexeme(lexeme)
+		if ok {
+			return tok
+		}
+		return Token{Identifier, lexeme}
+	} else if state == 2 {
+		return Token{Whitespace, lexeme}
+	} else if state == 3 {
+		return Token{Equals, lexeme}
+	} else if state == 4 {
+		return Token{Semicolon, lexeme}
+	} else if state == 5 {
+		return Token{LeftParen, lexeme}
+	} else if state == 6 {
+		return Token{RightParen, lexeme}
+	} else if state == 7 {
+		return Token{Operator, lexeme}
+	} else if state == 8 {
+		return Token{Integer, lexeme}
+	} else if state == 9 {
+		return Token{Colon, lexeme}
+	} else if state == 10 {
+		return Token{LeftArrow, lexeme}
+	} else if state == 11 {
+		return Token{LeftCurly, lexeme}
+	} else if state == 12 {
+		return Token{RightCurly, lexeme}
+	} else if state == 13 {
+		return Token{RelOp, lexeme}
 	}
-	if state == 2 {
-		return NewToken(Whitespace, lexeme)
-	}
-	if state == 3 {
-		return NewToken(Equals, lexeme)
-	}
-	if state == 4 {
-		return NewToken(Integer, lexeme)
-	}
-	if state == 5 {
-		return NewToken(Semicolon, lexeme)
-	}
-	return Token{Type: Error, Lexeme: lexeme}
+	return Token{Error, lexeme}
 }
 
-func getKeywordTokenByLexeme(lexeme string) (Token, error) {
-	switch lexeme {
-	case "for":
-		return Token{For, lexeme}, nil
-	case "if":
-		return Token{If, lexeme}, nil
-	case "else":
-		return Token{Else, lexeme}, nil
-	case "while":
-		return Token{While, lexeme}, nil
-	}
-
-	return Token{}, fmt.Errorf("No specified keyword")
+func (l *Lexer) isEndOfInput(src string, idx int) bool {
+	return idx >= len(src)
 }
 
-func (l *Lexer) isEndOfInput(srcProgramStr string, idx int) bool {
-	return idx > len(strings.Split(srcProgramStr, ""))-1
-}
-
-func (l *Lexer) nextChar(srcProgramStr string, idx int) (bool, byte) {
-	if !l.isEndOfInput(srcProgramStr, idx) {
-		return true, srcProgramStr[idx]
+func (l *Lexer) nextChar(src string, idx int) (bool, byte) {
+	if !l.isEndOfInput(src, idx) {
+		return true, src[idx]
 	}
 	return false, '.'
 }
+
+func (l *Lexer) catChar(ch byte) string {
+	switch {
+	case isAlpha(ch):
+		return "letter"
+	case isDigit(ch):
+		return "digit"
+	case ch == '_':
+		return "_"
+	case ch == ' ' || ch == '\t' || ch == '\n':
+		return "ws"
+	case ch == '=':
+		return "eq"
+	case ch == ';':
+		return "sc"
+	case ch == '(':
+		return "lp"
+	case ch == ')':
+		return "rp"
+	case ch == '+' || ch == '-' || ch == '/' || ch == '*':
+		return "op"
+	case ch == ':':
+		return "colon"
+	case ch == '{':
+		return "lc"
+	case ch == '}':
+		return "rc"
+	case ch == '<' || ch == '>' || ch == '!':
+		return "relop"
+	default:
+		return "other"
+	}
+}
+
 
 func (l *Lexer) NextToken(src string, idx int) (Token, string) {
 	state := 0
@@ -152,7 +306,7 @@ func (l *Lexer) NextToken(src string, idx int) (Token, string) {
 	lexeme := ""
 
 	if l.isEndOfInput(src, idx) {
-		return Token{Type: Error, Lexeme: "end"}, "end"
+		return Token{Type: End, Lexeme: "end"}, "end"
 	}
 
 	for state != -1 {
@@ -161,19 +315,15 @@ func (l *Lexer) NextToken(src string, idx int) (Token, string) {
 		}
 		stack = append(stack, state)
 
-		ok, ch := l.nextChar(src, idx)
+		exists, ch := l.nextChar(src, idx)
 		lexeme += string(ch)
-		if !ok {
-			fmt.Printf("LAST LEXEME: %v\n", lexeme)
+		if !exists {
 			break
 		}
 		idx++
 
 		cat := l.catChar(ch)
 		state = l.Tx[state][slices.Index(l.LexemeList, cat)]
-		fmt.Printf("Lexeme: %s => NEXT STATE: %d => CAT: %s => CHAR: %c => STACK: %v\n",
-			lexeme, state, cat, ch, stack)
-
 	}
 
 	if len(lexeme) > 0 {
@@ -181,7 +331,6 @@ func (l *Lexer) NextToken(src string, idx int) (Token, string) {
 	}
 
 	syntaxError := false
-
 	for len(stack) > 0 {
 		if stack[len(stack)-1] == -2 {
 			syntaxError = true
@@ -189,7 +338,6 @@ func (l *Lexer) NextToken(src string, idx int) (Token, string) {
 		}
 		if !l.isAcceptingState(stack[len(stack)-1]) {
 			stack = stack[:len(stack)-1]
-			fmt.Printf("POPPED => %v\n", stack)
 			if len(lexeme) > 0 {
 				lexeme = lexeme[:len(lexeme)-1]
 			}
@@ -199,16 +347,14 @@ func (l *Lexer) NextToken(src string, idx int) (Token, string) {
 			break
 		}
 	}
-	fmt.Printf("Lexeme: %v with state: %v\n", lexeme, state)
 
 	if syntaxError {
-		return Token{Type: Error, Lexeme: "error"}, "error"
+		return Token{Type: Error, Lexeme: lexeme}, lexeme
 	}
-
 	if l.isAcceptingState(state) {
 		return l.getTokenTypeByFinalState(state, lexeme), lexeme
 	}
-	return Token{Type: Error, Lexeme: "error"}, "error"
+	return Token{Type: Error, Lexeme: lexeme}, lexeme
 }
 
 func (l *Lexer) GenerateTokens(src string) []Token {
@@ -222,14 +368,9 @@ func (l *Lexer) GenerateTokens(src string) []Token {
 		idx += len(lexeme)
 		token, lexeme = l.NextToken(src, idx)
 		tokens = append(tokens, token)
-		fmt.Printf("Nxt TOKEN: %s (%s) => IDX: %d\n", token.Type, lexeme, idx)
-		if token.Type == Error || token.Type == End {
+		if token.Type == Error {
 			break
 		}
-	}
-
-	if token.Type == End {
-		fmt.Println("Encountered end of Input token!! Done")
 	}
 
 	return tokens
@@ -243,24 +384,12 @@ func isAlpha(ch byte) bool {
 	return (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z')
 }
 
-func (l *Lexer) catChar(ch byte) string {
-	if isDigit(ch) {
-		return "digit"
+func main() {
+	lexer := NewLexer()
+    source := "+= -= *= /="
+	tokens := lexer.GenerateTokens(source)
+	for _, tok := range tokens {
+		fmt.Printf("Token: %-10v Lexeme: %q\n", tok.Type.String(), tok.Lexeme)
 	}
-	if isAlpha(ch) {
-		return "letter"
-	}
-	if ch == '_' {
-		return "_"
-	}
-	if ch == ';' {
-		return "sc"
-	}
-	if ch == '=' {
-		return "eq"
-	}
-	if ch == ' ' {
-		return "ws"
-	}
-	return "other"
+
 }
