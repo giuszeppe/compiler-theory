@@ -86,6 +86,8 @@ const (
 	RelOp
 	Comma
 
+	HexNumber
+	Float
 	// Keywords (not in the count)
 	Return
 	Let
@@ -135,10 +137,11 @@ func NewLexer() Lexer {
 			"rc",
 			"relop",
 			"comma",
-            "hash",
+			"hash",
+            "dot",
 		},
-		StateList:  []int{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14},
-		StatesAccp: []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14},
+		StateList:  []int{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
+		StatesAccp: []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
 	}
 	lexer.Rows = len(lexer.StateList)
 	lexer.Cols = len(lexer.LexemeList)
@@ -186,6 +189,15 @@ func (l *Lexer) initialiseTable() {
 	l.Tx[13][slices.Index(l.LexemeList, "eq")] = 13
 
 	l.Tx[0][slices.Index(l.LexemeList, "comma")] = 14
+	l.Tx[0][slices.Index(l.LexemeList, "hash")] = 15
+	l.Tx[15][slices.Index(l.LexemeList, "digit")] = 15
+	l.Tx[15][slices.Index(l.LexemeList, "letter")] = 15
+
+	l.Tx[8][slices.Index(l.LexemeList, "dot")] = 16
+	l.Tx[16][slices.Index(l.LexemeList, "digit")] = 16
+
+
+
 }
 
 func (l *Lexer) isAcceptingState(state int) bool {
@@ -263,6 +275,10 @@ func (l *Lexer) getTokenTypeByFinalState(state int, lexeme string) Token {
 		return Token{RelOp, lexeme}
 	} else if state == 14 {
 		return Token{Comma, lexeme}
+	} else if state == 15 {
+		return Token{HexNumber, lexeme}
+	} else if state == 16 {
+		return Token{Float, lexeme}
 	}
 	return Token{Error, lexeme}
 }
@@ -308,6 +324,10 @@ func (l *Lexer) catChar(ch byte) string {
 		return "relop"
 	case ch == ',':
 		return "comma"
+	case ch == '#':
+		return "hash"
+	case ch == '.':
+		return "dot"
 	default:
 		return "other"
 	}

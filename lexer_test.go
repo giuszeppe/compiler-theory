@@ -15,8 +15,11 @@ func TestAllTokenTypes(t *testing.T) {
 		{"abc", Token{Identifier, "abc"}},
 		{"_temp1", Token{Identifier, "_temp1"}},
 
-		// Integers
+		// Numbers
 		{"123", Token{Integer, "123"}},
+		{"#ab12cf", Token{HexNumber, "#ab12cf"}},
+		{"12.3", Token{Float, "12.3"}},
+
 
 		// Whitespace
 		{" ", Token{Whitespace, " "}},
