@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"slices"
+	"strings"
 )
 
 type Token struct {
@@ -60,6 +61,10 @@ func (t TokenType) String() string {
 		return "LeftArrow"
 	case Comma:
 		return "Comma"
+	case CommentSingleLine:
+		return "CommentSingleLine"
+	case CommentMultiLine:
+		return "CommentMultiLine"
 	default:
 		return "Unknown"
 	}
@@ -68,26 +73,31 @@ func (t TokenType) String() string {
 const (
 	Identifier TokenType = iota + 1
 	Integer
-	Whitespace
+	WhitespaceToken
 	// Op
-	Equals
+	EqualsToken
 	// Syntax
-	Semicolon
-	LeftParen
-	RightParen
+	SemicolonToken
+	LeftParenToken
+	RightParenToken
 
-	Operator
-	Colon
-	LeftArrow
+	OperatorToken
+	ColonToken
+	LeftArrowToken
 
-	RightCurly
-	LeftCurly
+	RightCurlyToken
+	LeftCurlyToken
 
-	RelOp
-	Comma
+	RelOpToken
+	CommaToken
 
 	HexNumber
 	Float
+
+	// Comments
+	CommentSingleLine
+	CommentMultiLine
+	NewLine
 	// Keywords (not in the count)
 	Return
 	Let
@@ -105,12 +115,103 @@ const (
 	False
 )
 
+// Lexeme constants
+const (
+	Underscore = iota
+	Letter
+	Digit
+	Whitespace
+	Equals
+	Semicolon
+	LeftParen
+	RightParen
+	Operator
+	Other
+	Colon
+	LeftArrow
+	LeftCurly
+	RightCurly
+	RelOp
+	Comma
+	Hash
+	Dot
+	Slash
+	Star
+	Newline
+	LexemeCount // total count of lexeme types
+)
+
+// States constants
+const (
+	StateStart = iota
+	StateIdent
+	StateWhitespace
+	StateEquals
+	StateSemicolon
+	StateLeftParen
+	StateRightParen
+	StateOperator
+	StateInt
+	StateColon
+	StateRelOpExtended
+	StateLeftCurly
+	StateRightCurly
+	StateRelOp
+	StateComma
+	StateHex
+	StateFloat
+	StateMultilineComment
+	StateNewline
+	StateCount // total number of states
+)
+
+var finalStateToTokenType = map[int]TokenType{
+	StateWhitespace: Whitespace,
+	StateEquals:     Equals,
+	StateSemicolon:  Semicolon,
+	StateLeftParen:  LeftParen,
+	StateRightParen: RightParen,
+	StateOperator:   Operator,
+	StateInt:        Integer,
+	StateColon:      Colon,
+	StateLeftCurly:  LeftCurly,
+	StateRightCurly: RightCurly,
+	StateRelOp:      RelOp,
+	StateComma:      Comma,
+	StateHex:        HexNumber,
+	StateFloat:      Float,
+	StateNewline:    NewLine,
+}
+var charCategoryMap = map[byte]string{
+	'_':  "_",
+	' ':  "ws",
+	'\t': "ws",
+	'\n': "nl",
+	'=':  "eq",
+	';':  "sc",
+	'(':  "lp",
+	')':  "rp",
+	'+':  "op",
+	'-':  "op",
+	'*':  "op",
+	'/':  "op",
+	':':  "colon",
+	'{':  "lc",
+	'}':  "rc",
+	'<':  "relop",
+	'>':  "relop",
+	'!':  "relop",
+	',':  "comma",
+	'#':  "hash",
+	'.':  "dot",
+}
+
 func NewToken(t TokenType, lexeme string) Token {
 	return Token{t, lexeme}
 }
 
 type Lexer struct {
-	LexemeList []string
+	LexemeMap  map[string]int
 	StateList  []int
 	StatesAccp []int
 	Rows       int
@@ -120,31 +221,43 @@ type Lexer struct {
 
 func NewLexer() Lexer {
 	lexer := Lexer{
-		LexemeList: []string{
-			"_",
-			"letter",
-			"digit",
-			"ws",
-			"eq",
-			"sc",
-			"lp",
-			"rp",
-			"op",
-			"other",
-			"colon",
-			"leftArrow",
-			"lc",
-			"rc",
-			"relop",
-			"comma",
-			"hash",
-            "dot",
+		LexemeMap: map[string]int{
+			"_":         Underscore,
+			"letter":    Letter,
+			"digit":     Digit,
+			"ws":        Whitespace,
+			"eq":        Equals,
+			"sc":        Semicolon,
+			"lp":        LeftParen,
+			"rp":        RightParen,
+			"op":        Operator,
+			"other":     Other,
+			"colon":     Colon,
+			"leftArrow": LeftArrow,
+			"lc":        LeftCurly,
+			"rc":        RightCurly,
+			"relop":     RelOp,
+			"comma":     Comma,
+			"hash":      Hash,
+			"dot":       Dot,
+			"slash":     Slash,
+			"star":      Star,
+			"nl":        Newline,
 		},
-		StateList:  []int{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
-		StatesAccp: []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
+
+		StateList: make([]int, StateCount),
+		StatesAccp: []int{
+			StateIdent,
+			StateWhitespace,
+			StateEquals,
+			StateSemicolon,
+			StateLeftParen, StateRightParen, StateOperator, StateInt, StateColon, StateRelOpExtended, StateLeftCurly, StateRightCurly, StateRelOp, StateComma, StateHex, StateFloat, StateMultilineComment, StateNewline},
+
+		// StateList:  []int{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19},
+		// StatesAccp: []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 18, 19},
 	}
-	lexer.Rows = len(lexer.StateList)
-	lexer.Cols = len(lexer.LexemeList)
+	lexer.Rows = StateCount
+	lexer.Cols = LexemeCount
 
 	lexer.Tx = make([][]int, lexer.Rows)
 	for i := 0; i < lexer.Rows; i++ {
@@ -158,46 +271,53 @@ func NewLexer() Lexer {
 }
 
 func (l *Lexer) initialiseTable() {
-	l.Tx[0][slices.Index(l.LexemeList, "letter")] = 1
-	l.Tx[0][slices.Index(l.LexemeList, "_")] = 1
-	l.Tx[1][slices.Index(l.LexemeList, "letter")] = 1
-	l.Tx[1][slices.Index(l.LexemeList, "digit")] = 1
+	l.Tx[StateStart][Letter] = StateIdent
+	l.Tx[StateStart][Underscore] = StateIdent
+	l.Tx[StateIdent][Letter] = StateIdent
+	l.Tx[StateIdent][Digit] = StateIdent
 
-	l.Tx[0][slices.Index(l.LexemeList, "ws")] = 2
-	l.Tx[2][slices.Index(l.LexemeList, "ws")] = 2
+	l.Tx[StateStart][Whitespace] = StateWhitespace
+	l.Tx[StateWhitespace][Whitespace] = StateWhitespace
 
-	l.Tx[0][slices.Index(l.LexemeList, "eq")] = 3
-	l.Tx[0][slices.Index(l.LexemeList, "sc")] = 4
-	l.Tx[0][slices.Index(l.LexemeList, "lp")] = 5
-	l.Tx[0][slices.Index(l.LexemeList, "rp")] = 6
+	l.Tx[StateStart][Equals] = StateEquals
+	l.Tx[StateStart][Semicolon] = StateSemicolon
+	l.Tx[StateStart][LeftParen] = StateLeftParen
+	l.Tx[StateStart][RightParen] = StateRightParen
 
-	l.Tx[0][slices.Index(l.LexemeList, "op")] = 7
-	l.Tx[7][slices.Index(l.LexemeList, "eq")] = 7
+	l.Tx[StateStart][Operator] = StateOperator
+	l.Tx[StateOperator][Equals] = StateOperator
 
-	l.Tx[0][slices.Index(l.LexemeList, "digit")] = 8
-	l.Tx[8][slices.Index(l.LexemeList, "digit")] = 8
+	l.Tx[StateStart][Digit] = StateInt
+	l.Tx[StateInt][Digit] = StateInt
 
-	l.Tx[0][slices.Index(l.LexemeList, "colon")] = 9
+	l.Tx[StateStart][Colon] = StateColon
+	l.Tx[StateOperator][RelOp] = StateRelOpExtended
 
-	l.Tx[7][slices.Index(l.LexemeList, "relop")] = 10
+	l.Tx[StateStart][LeftCurly] = StateLeftCurly
+	l.Tx[StateStart][RightCurly] = StateRightCurly
 
-	l.Tx[0][slices.Index(l.LexemeList, "lc")] = 11
-	l.Tx[0][slices.Index(l.LexemeList, "rc")] = 12
+	l.Tx[StateStart][RelOp] = StateRelOp
+	l.Tx[StateEquals][Equals] = StateRelOp
+	l.Tx[StateRelOp][Equals] = StateRelOp
 
-	l.Tx[0][slices.Index(l.LexemeList, "relop")] = 13
-	l.Tx[3][slices.Index(l.LexemeList, "eq")] = 13
-	l.Tx[13][slices.Index(l.LexemeList, "eq")] = 13
+	l.Tx[StateStart][Comma] = StateComma
 
-	l.Tx[0][slices.Index(l.LexemeList, "comma")] = 14
-	l.Tx[0][slices.Index(l.LexemeList, "hash")] = 15
-	l.Tx[15][slices.Index(l.LexemeList, "digit")] = 15
-	l.Tx[15][slices.Index(l.LexemeList, "letter")] = 15
+	l.Tx[StateStart][Hash] = StateHex
+	l.Tx[StateHex][Digit] = StateHex
+	l.Tx[StateHex][Letter] = StateHex
 
-	l.Tx[8][slices.Index(l.LexemeList, "dot")] = 16
-	l.Tx[16][slices.Index(l.LexemeList, "digit")] = 16
+	l.Tx[StateInt][Dot] = StateFloat
+	l.Tx[StateFloat][Digit] = StateFloat
 
+	l.Tx[StateOperator][Operator] = StateMultilineComment
 
+	l.Tx[StateStart][Newline] = StateNewline
 
+	for idx := 0; idx < int(LexemeCount); idx++ {
+		if idx != Newline {
+			l.Tx[StateMultilineComment][idx] = StateMultilineComment
+		}
+	}
 }
 
 func (l *Lexer) isAcceptingState(state int) bool {
@@ -237,48 +357,32 @@ func getTypeTokenByLexeme(lexeme string) (Token, bool) {
 }
 
 func (l *Lexer) getTokenTypeByFinalState(state int, lexeme string) Token {
-	if state == 1 {
-		tok, ok := getKeywordTokenByLexeme(lexeme)
-		if ok {
+	switch state {
+	case StateIdent:
+		if tok, ok := getKeywordTokenByLexeme(lexeme); ok {
 			return tok
 		}
-		tok, ok = getTypeTokenByLexeme(lexeme)
-		if ok {
+		if tok, ok := getTypeTokenByLexeme(lexeme); ok {
 			return tok
 		}
 		return Token{Identifier, lexeme}
-	} else if state == 2 {
-		return Token{Whitespace, lexeme}
-	} else if state == 3 {
-		return Token{Equals, lexeme}
-	} else if state == 4 {
-		return Token{Semicolon, lexeme}
-	} else if state == 5 {
-		return Token{LeftParen, lexeme}
-	} else if state == 6 {
-		return Token{RightParen, lexeme}
-	} else if state == 7 {
-		return Token{Operator, lexeme}
-	} else if state == 8 {
-		return Token{Integer, lexeme}
-	} else if state == 9 {
-		return Token{Colon, lexeme}
-	} else if state == 10 {
+
+	case StateRelOpExtended:
 		if lexeme == "->" {
 			return Token{LeftArrow, lexeme}
 		}
-	} else if state == 11 {
-		return Token{LeftCurly, lexeme}
-	} else if state == 12 {
-		return Token{RightCurly, lexeme}
-	} else if state == 13 {
-		return Token{RelOp, lexeme}
-	} else if state == 14 {
-		return Token{Comma, lexeme}
-	} else if state == 15 {
-		return Token{HexNumber, lexeme}
-	} else if state == 16 {
-		return Token{Float, lexeme}
+
+	case StateMultilineComment:
+		if strings.HasPrefix(lexeme, "//") {
+			return Token{CommentSingleLine, lexeme}
+		}
+		if strings.HasPrefix(lexeme, "/*") && strings.HasSuffix(lexeme, "*/") {
+			return Token{CommentMultiLine, lexeme}
+		}
+	}
+
+	if tokenType, ok := finalStateToTokenType[state]; ok {
+		return Token{tokenType, lexeme}
 	}
 	return Token{Error, lexeme}
 }
@@ -295,42 +399,19 @@ func (l *Lexer) nextChar(src string, idx int) (bool, byte) {
 }
 
 func (l *Lexer) catChar(ch byte) string {
+	// Basic classification via direct map
+	if class, ok := charCategoryMap[ch]; ok {
+		return class
+	}
+
+	// Fallback to functional classification
 	switch {
 	case isAlpha(ch):
 		return "letter"
 	case isDigit(ch):
 		return "digit"
-	case ch == '_':
-		return "_"
-	case ch == ' ' || ch == '\t' || ch == '\n':
-		return "ws"
-	case ch == '=':
-		return "eq"
-	case ch == ';':
-		return "sc"
-	case ch == '(':
-		return "lp"
-	case ch == ')':
-		return "rp"
-	case ch == '+' || ch == '-' || ch == '/' || ch == '*':
-		return "op"
-	case ch == ':':
-		return "colon"
-	case ch == '{':
-		return "lc"
-	case ch == '}':
-		return "rc"
-	case ch == '<' || ch == '>' || ch == '!':
-		return "relop"
-	case ch == ',':
-		return "comma"
-	case ch == '#':
-		return "hash"
-	case ch == '.':
-		return "dot"
-	default:
-		return "other"
 	}
+	return "other"
 }
 
 func (l *Lexer) NextToken(src string, idx int) (Token, string) {
@@ -356,7 +437,8 @@ func (l *Lexer) NextToken(src string, idx int) (Token, string) {
 		idx++
 
 		cat := l.catChar(ch)
-		state = l.Tx[state][slices.Index(l.LexemeList, cat)]
+		idx, _ := l.LexemeMap[cat]
+		state = l.Tx[state][idx]
 	}
 
 	if len(lexeme) > 0 {
@@ -419,7 +501,10 @@ func isAlpha(ch byte) bool {
 
 func main() {
 	lexer := NewLexer()
-	source := "->"
+	source := `let x:int=3;
+    x += 3;
+
+    `
 	tokens := lexer.GenerateTokens(source)
 	for _, tok := range tokens {
 		fmt.Printf("Token: %-10v Lexeme: %q\n", tok.Type.String(), tok.Lexeme)

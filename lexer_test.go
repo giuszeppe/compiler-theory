@@ -63,6 +63,9 @@ func TestAllTokenTypes(t *testing.T) {
 		{"float", Token{FloatType, "float"}},
 		{"bool", Token{BoolType, "bool"}},
 		{"colour", Token{ColourType, "colour"}},
+
+
+		{"//comment and dw", Token{CommentSingleLine, "//comment and dw"}},
 	}
 
 	for _, test := range tests {
