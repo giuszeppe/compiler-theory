@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"slices"
-	"strings"
 )
 
 type Token struct {
@@ -31,8 +30,8 @@ func (t TokenType) String() string {
 		return "RightParen"
 	case Return:
 		return "Return"
-	case Operator:
-		return "Operator"
+	case Plus:
+		return "Plus"
 	case Let:
 		return "Let"
 	case Error:
@@ -41,7 +40,7 @@ func (t TokenType) String() string {
 		return "End"
 	case As:
 		return "As"
-	case Colon:
+	case ColonToken:
 		return "Colon"
 	case IntType:
 		return "IntType"
@@ -55,16 +54,18 @@ func (t TokenType) String() string {
 		return "LeftCurly"
 	case RightCurly:
 		return "RightCurly"
-	case RelOp:
+	case RelOpToken:
 		return "RelOp"
-	case LeftArrow:
+	case LeftArrowToken:
 		return "LeftArrow"
-	case Comma:
+	case CommaToken:
 		return "Comma"
 	case CommentSingleLine:
 		return "CommentSingleLine"
 	case CommentMultiLine:
 		return "CommentMultiLine"
+	case NewLineToken:
+		return "Newline"
 	default:
 		return "Unknown"
 	}
@@ -97,7 +98,7 @@ const (
 	// Comments
 	CommentSingleLine
 	CommentMultiLine
-	NewLine
+	NewLineToken
 	// Keywords (not in the count)
 	Return
 	Let
@@ -125,7 +126,10 @@ const (
 	Semicolon
 	LeftParen
 	RightParen
-	Operator
+	Plus
+	Minus
+	Slash
+	Star
 	Other
 	Colon
 	LeftArrow
@@ -135,8 +139,6 @@ const (
 	Comma
 	Hash
 	Dot
-	Slash
-	Star
 	Newline
 	LexemeCount // total count of lexeme types
 )
@@ -150,7 +152,10 @@ const (
 	StateSemicolon
 	StateLeftParen
 	StateRightParen
-	StateOperator
+	StatePlus
+	StateStar
+	StateSlash
+	StateMinus
 	StateInt
 	StateColon
 	StateRelOpExtended
@@ -160,27 +165,40 @@ const (
 	StateComma
 	StateHex
 	StateFloat
-	StateMultilineComment
+
+	StateMultilineCommentOpen
+	StateMultilineAlmostClosed
+	StateMultilineClosed
+
+	StateSinglelineComment
 	StateNewline
+
 	StateCount // total number of states
 )
 
 var finalStateToTokenType = map[int]TokenType{
-	StateWhitespace: Whitespace,
-	StateEquals:     Equals,
-	StateSemicolon:  Semicolon,
-	StateLeftParen:  LeftParen,
-	StateRightParen: RightParen,
-	StateOperator:   Operator,
-	StateInt:        Integer,
-	StateColon:      Colon,
-	StateLeftCurly:  LeftCurly,
-	StateRightCurly: RightCurly,
-	StateRelOp:      RelOp,
-	StateComma:      Comma,
-	StateHex:        HexNumber,
-	StateFloat:      Float,
-	StateNewline:    NewLine,
+	StateWhitespace:            Whitespace,
+	StateEquals:                Equals,
+	StateSemicolon:             Semicolon,
+	StateLeftParen:             LeftParen,
+	StateRightParen:            RightParen,
+	StateMinus:                 OperatorToken,
+	StateStar:                  OperatorToken,
+	StateSlash:                 OperatorToken,
+	StatePlus:                  OperatorToken,
+	StateInt:                   Integer,
+	StateColon:                 Colon,
+	StateLeftCurly:             LeftCurly,
+	StateRightCurly:            RightCurly,
+	StateRelOp:                 RelOp,
+	StateComma:                 Comma,
+	StateHex:                   HexNumber,
+	StateFloat:                 Float,
+	StateNewline:               NewLineToken,
+	StateSinglelineComment:     CommentSingleLine,
+	StateMultilineClosed:       CommentMultiLine,
+	StateMultilineAlmostClosed: CommentMultiLine,
+	StateMultilineCommentOpen:  CommentMultiLine,
 }
 var charCategoryMap = map[byte]string{
 	'_':  "_",
@@ -191,10 +209,10 @@ var charCategoryMap = map[byte]string{
 	';':  "sc",
 	'(':  "lp",
 	')':  "rp",
-	'+':  "op",
-	'-':  "op",
-	'*':  "op",
-	'/':  "op",
+	'+':  "plus",
+	'-':  "minus",
+	'*':  "star",
+	'/':  "slash",
 	':':  "colon",
 	'{':  "lc",
 	'}':  "rc",
@@ -230,7 +248,10 @@ func NewLexer() Lexer {
 			"sc":        Semicolon,
 			"lp":        LeftParen,
 			"rp":        RightParen,
-			"op":        Operator,
+			"plus":      Plus,
+			"minus":     Minus,
+			"slash":     Slash,
+			"star":      Star,
 			"other":     Other,
 			"colon":     Colon,
 			"leftArrow": LeftArrow,
@@ -240,8 +261,6 @@ func NewLexer() Lexer {
 			"comma":     Comma,
 			"hash":      Hash,
 			"dot":       Dot,
-			"slash":     Slash,
-			"star":      Star,
 			"nl":        Newline,
 		},
 
@@ -251,10 +270,27 @@ func NewLexer() Lexer {
 			StateWhitespace,
 			StateEquals,
 			StateSemicolon,
-			StateLeftParen, StateRightParen, StateOperator, StateInt, StateColon, StateRelOpExtended, StateLeftCurly, StateRightCurly, StateRelOp, StateComma, StateHex, StateFloat, StateMultilineComment, StateNewline},
-
-		// StateList:  []int{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19},
-		// StatesAccp: []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 18, 19},
+			StateLeftParen,
+			StateRightParen,
+			StatePlus,
+			StateMinus,
+			StateStar,
+			StateSlash,
+			StateInt,
+			StateColon,
+			StateRelOpExtended,
+			StateLeftCurly,
+			StateRightCurly,
+			StateRelOp,
+			StateComma,
+			StateHex,
+			StateFloat,
+			StateSinglelineComment,
+			StateMultilineCommentOpen,
+			StateMultilineAlmostClosed,
+			StateMultilineClosed,
+			StateNewline,
+		},
 	}
 	lexer.Rows = StateCount
 	lexer.Cols = LexemeCount
@@ -284,14 +320,21 @@ func (l *Lexer) initialiseTable() {
 	l.Tx[StateStart][LeftParen] = StateLeftParen
 	l.Tx[StateStart][RightParen] = StateRightParen
 
-	l.Tx[StateStart][Operator] = StateOperator
-	l.Tx[StateOperator][Equals] = StateOperator
+	l.Tx[StateStart][Plus] = StatePlus
+	l.Tx[StateStart][Minus] = StateMinus
+	l.Tx[StateStart][Star] = StateStar
+	l.Tx[StateStart][Slash] = StateSlash
+
+	l.Tx[StatePlus][Equals] = StatePlus
+	l.Tx[StateStar][Equals] = StateStar
+	l.Tx[StateSlash][Equals] = StateSlash
+	l.Tx[StateMinus][Equals] = StateMinus
 
 	l.Tx[StateStart][Digit] = StateInt
 	l.Tx[StateInt][Digit] = StateInt
 
 	l.Tx[StateStart][Colon] = StateColon
-	l.Tx[StateOperator][RelOp] = StateRelOpExtended
+	l.Tx[StateMinus][RelOp] = StateRelOpExtended
 
 	l.Tx[StateStart][LeftCurly] = StateLeftCurly
 	l.Tx[StateStart][RightCurly] = StateRightCurly
@@ -309,13 +352,26 @@ func (l *Lexer) initialiseTable() {
 	l.Tx[StateInt][Dot] = StateFloat
 	l.Tx[StateFloat][Digit] = StateFloat
 
-	l.Tx[StateOperator][Operator] = StateMultilineComment
+	l.Tx[StateSlash][Slash] = StateSinglelineComment
 
 	l.Tx[StateStart][Newline] = StateNewline
 
 	for idx := 0; idx < int(LexemeCount); idx++ {
 		if idx != Newline {
-			l.Tx[StateMultilineComment][idx] = StateMultilineComment
+			l.Tx[StateSinglelineComment][idx] = StateSinglelineComment
+		}
+	}
+
+	l.Tx[StateSlash][Star] = StateMultilineCommentOpen
+
+	l.Tx[StateMultilineCommentOpen][Star] = StateMultilineAlmostClosed
+	l.Tx[StateMultilineAlmostClosed][Slash] = StateMultilineClosed
+	l.Tx[StateMultilineAlmostClosed][Star] = StateMultilineAlmostClosed
+
+	for idx := 0; idx < int(LexemeCount); idx++ {
+		if idx != Star {
+			l.Tx[StateMultilineAlmostClosed][idx] = StateMultilineCommentOpen
+			l.Tx[StateMultilineCommentOpen][idx] = StateMultilineCommentOpen
 		}
 	}
 }
@@ -371,15 +427,16 @@ func (l *Lexer) getTokenTypeByFinalState(state int, lexeme string) Token {
 		if lexeme == "->" {
 			return Token{LeftArrow, lexeme}
 		}
-
-	case StateMultilineComment:
-		if strings.HasPrefix(lexeme, "//") {
-			return Token{CommentSingleLine, lexeme}
-		}
-		if strings.HasPrefix(lexeme, "/*") && strings.HasSuffix(lexeme, "*/") {
-			return Token{CommentMultiLine, lexeme}
-		}
 	}
+
+	// case StateMultilineComment:
+	// 	if strings.HasPrefix(lexeme, "//") {
+	// 		return Token{CommentSingleLine, lexeme}
+	// 	}
+	// 	if strings.HasPrefix(lexeme, "/*") && strings.HasSuffix(lexeme, "*/") {
+	// 		return Token{CommentMultiLine, lexeme}
+	// 	}
+	// }
 
 	if tokenType, ok := finalStateToTokenType[state]; ok {
 		return Token{tokenType, lexeme}

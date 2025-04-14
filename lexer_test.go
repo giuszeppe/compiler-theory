@@ -20,10 +20,9 @@ func TestAllTokenTypes(t *testing.T) {
 		{"#ab12cf", Token{HexNumber, "#ab12cf"}},
 		{"12.3", Token{Float, "12.3"}},
 
-
 		// Whitespace
 		{" ", Token{Whitespace, " "}},
-		{"\n", Token{Whitespace, "\n"}},
+		{"\n", Token{NewLineToken, "\n"}},
 		{"\t", Token{Whitespace, "\t"}},
 
 		// Symbols
@@ -31,10 +30,10 @@ func TestAllTokenTypes(t *testing.T) {
 		{";", Token{Semicolon, ";"}},
 		{"(", Token{LeftParen, "("}},
 		{")", Token{RightParen, ")"}},
-		{"+", Token{Operator, "+"}},
-		{"-", Token{Operator, "-"}},
-		{"*", Token{Operator, "*"}},
-		{"/", Token{Operator, "/"}},
+		{"+", Token{OperatorToken, "+"}},
+		{"-", Token{OperatorToken, "-"}},
+		{"*", Token{OperatorToken, "*"}},
+		{"/", Token{OperatorToken, "/"}},
 		{":", Token{Colon, ":"}},
 		{",", Token{Comma, ","}},
 		{"{", Token{LeftCurly, "{"}},
@@ -64,8 +63,15 @@ func TestAllTokenTypes(t *testing.T) {
 		{"bool", Token{BoolType, "bool"}},
 		{"colour", Token{ColourType, "colour"}},
 
-
 		{"//comment and dw", Token{CommentSingleLine, "//comment and dw"}},
+		{"/* comment and dw */", Token{CommentMultiLine, "/* comment and dw */"}},
+		{"/* comment and dw *", Token{CommentMultiLine, "/* comment and dw *"}},
+		{"/* comment and dw ", Token{CommentMultiLine, "/* comment and dw "}},
+		{`/* comment and dw
+            ez ez ez
+            `, Token{CommentMultiLine, `/* comment and dw
+            ez ez ez
+            `}},
 	}
 
 	for _, test := range tests {
