@@ -187,7 +187,7 @@ var finalStateToTokenType = map[int]TokenType{
 	StateSlash:                 OperatorToken,
 	StatePlus:                  OperatorToken,
 	StateInt:                   Integer,
-	StateColon:                 Colon,
+	StateColon:                 ColonToken,
 	StateLeftCurly:             LeftCurly,
 	StateRightCurly:            RightCurly,
 	StateRelOp:                 RelOp,
@@ -334,6 +334,7 @@ func (l *Lexer) initialiseTable() {
 	l.Tx[StateInt][Digit] = StateInt
 
 	l.Tx[StateStart][Colon] = StateColon
+
 	l.Tx[StateMinus][RelOp] = StateRelOpExtended
 
 	l.Tx[StateStart][LeftCurly] = StateLeftCurly
@@ -428,15 +429,6 @@ func (l *Lexer) getTokenTypeByFinalState(state int, lexeme string) Token {
 			return Token{LeftArrow, lexeme}
 		}
 	}
-
-	// case StateMultilineComment:
-	// 	if strings.HasPrefix(lexeme, "//") {
-	// 		return Token{CommentSingleLine, lexeme}
-	// 	}
-	// 	if strings.HasPrefix(lexeme, "/*") && strings.HasSuffix(lexeme, "*/") {
-	// 		return Token{CommentMultiLine, lexeme}
-	// 	}
-	// }
 
 	if tokenType, ok := finalStateToTokenType[state]; ok {
 		return Token{tokenType, lexeme}
@@ -556,14 +548,3 @@ func isAlpha(ch byte) bool {
 	return (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z')
 }
 
-func main() {
-	lexer := NewLexer()
-	source := `let x:int=3;
-    x += 3;
-
-    `
-	tokens := lexer.GenerateTokens(source)
-	for _, tok := range tokens {
-		fmt.Printf("Token: %-10v Lexeme: %q\n", tok.Type.String(), tok.Lexeme)
-	}
-}
