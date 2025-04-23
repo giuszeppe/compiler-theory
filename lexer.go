@@ -311,6 +311,7 @@ func (l *Lexer) initialiseTable() {
 	l.Tx[StateStart][Underscore] = StateIdent
 	l.Tx[StateIdent][Letter] = StateIdent
 	l.Tx[StateIdent][Digit] = StateIdent
+	l.Tx[StateIdent][Underscore] = StateIdent
 
 	l.Tx[StateStart][Whitespace] = StateWhitespace
 	l.Tx[StateWhitespace][Whitespace] = StateWhitespace

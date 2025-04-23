@@ -1,5 +1,7 @@
 package main
 
+import "fmt"
+
 // ==== Visitor Interface ====
 
 type ASTVisitor interface {
@@ -8,9 +10,11 @@ type ASTVisitor interface {
 	VisitVariableNode(node *ASTVariableNode)
 	VisitBlockNode(node *ASTBlockNode)
 	VisitVarDeclNode(node *ASTVarDeclNode)
-    VisitBinaryOpNode(node *ASTBinaryOpNode)
-    VisitExpressionNode(node *ASTExpressionNode)
-    VisitSimpleExpressionNode(node *ASTSimpleExpression)
+	VisitBinaryOpNode(node *ASTBinaryOpNode)
+	VisitExpressionNode(node *ASTExpressionNode)
+	VisitSimpleExpressionNode(node *ASTSimpleExpression)
+	VisitProgramNode(node *ASTProgramNode)
+    VisitPrintNode(node *ASTPrintNode)
 	IncTabCount()
 	DecTabCount()
 }
@@ -22,6 +26,14 @@ type ASTNode interface {
 }
 
 // ==== AST Node Structs ====
+
+type ASTProgramNode struct {
+	Block ASTBlockNode
+}
+
+func (p *ASTProgramNode) Accept(visitor ASTVisitor) {
+	visitor.VisitProgramNode(p)
+}
 
 type ASTIntegerNode struct {
 	Name  string
@@ -41,8 +53,8 @@ func (n *ASTVariableNode) Accept(visitor ASTVisitor) {
 }
 
 type ASTAssignmentNode struct {
-	Id   ASTVariableNode // usually a VariableNode
-	Expr ASTExpressionNode// usually an Expression Node
+	Id   ASTVariableNode   // usually a VariableNode
+	Expr ASTExpressionNode // usually an Expression Node
 }
 
 func (n *ASTAssignmentNode) Accept(visitor ASTVisitor) {
@@ -77,11 +89,11 @@ func (n *ASTVarDeclNode) Accept(visitor ASTVisitor) {
 
 type ASTExpressionNode struct {
 	Expr ASTNode
-	Type     string
+	Type string
 }
 
 func (n *ASTExpressionNode) Accept(visitor ASTVisitor) {
-    visitor.VisitExpressionNode(n)
+	visitor.VisitExpressionNode(n)
 }
 
 type ASTLiteralNode struct {
@@ -96,7 +108,7 @@ type ASTSimpleExpression struct {
 }
 
 func (n *ASTSimpleExpression) Accept(visitor ASTVisitor) {
-    visitor.VisitSimpleExpressionNode(n)
+	visitor.VisitSimpleExpressionNode(n)
 }
 
 type ASTBinaryOpNode struct {
@@ -110,3 +122,27 @@ func (b *ASTBinaryOpNode) Accept(visitor ASTVisitor) {
 	visitor.VisitBinaryOpNode(b)
 }
 
+type ASTPrintNode struct {
+	Expr ASTExpressionNode
+}
+
+// Implementing ASTNode interface's Accept method
+func (b *ASTPrintNode) Accept(visitor ASTVisitor) {
+	visitor.VisitPrintNode(b)
+}
+
+type ASTEpsilon struct {}
+
+func (b *ASTEpsilon) Accept(visitor ASTVisitor) {
+    fmt.Println("Epsilon")
+}
+
+type ASTOpList struct {
+	Pairs []struct {
+		Op    string
+		Right ASTNode
+	}
+}
+func (b *ASTOpList) Accept(visitor ASTVisitor) {
+    fmt.Println("ASTOpList")
+}
