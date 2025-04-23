@@ -113,3 +113,26 @@ func (v *PrintNodesVisitor) VisitIfNode(node *ASTIfNode) {
 	}
 	v.DecTabCount()
 }
+
+func (v *PrintNodesVisitor) VisitWhileNode(node *ASTWhileNode) {
+	v.NodeCount++
+	fmt.Println(strings.Repeat("\t", v.TabCount), "While node =>")
+	v.IncTabCount()
+	node.Condition.Accept(v)
+	node.Block.Accept(v)
+	v.DecTabCount()
+}
+
+func (v *PrintNodesVisitor) VisitTypeCastNode(node *ASTTypeCastNode) {
+	v.NodeCount++
+	fmt.Println(strings.Repeat("\t", v.TabCount), "Type cast node:: ", node.Type, " =>")
+	v.IncTabCount()
+	node.Expr.Accept(v)
+	v.DecTabCount()
+}
+func (v *PrintNodesVisitor) VisitEpsilon(node *ASTEpsilon) {
+	v.NodeCount++
+	fmt.Println(strings.Repeat("\t", v.TabCount), "Epsilon node")
+	v.IncTabCount()
+	v.DecTabCount()
+}

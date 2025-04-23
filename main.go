@@ -6,11 +6,13 @@ import (
 )
 
 func main() {
-	program := `if (3) {
+	program := `while (3) {
 		let x:int = 3;
-		x = 3 + 4 + 5 * 6;
-	} else {
-	 	let y:int = 4;
+		x = 3 + 4 + (5 * (6 as float) as int);
+		if (x) {
+			let y:int = 3;
+			y = 3 + 4 + 5 * 6;
+		}
 	}`
 	parser := NewParser(program)
 	printVisitor := PrintNodesVisitor{}
@@ -134,18 +136,45 @@ func NewGrammar() *Grammar {
 	// — Expr → SimpleExpr ExprPrime
 	g.Rules = append(g.Rules, Rule{
 		LHS: "Expr",
-		RHS: []Symbol{"SimpleExpr", "ExprPrime"},
+		RHS: []Symbol{"SimpleExpr", "ExprPrime", "ExprTail"},
 		Action: func(ch []ASTNode) ASTNode {
-			// if ExprPrime is just ε, it returns SimpleExpr wrapped as ASTExpressionNode
-			fmt.Println("Expr -> SimpleExpr ExprPrime", ch)
+			// if ExprPrime is just ε, it returns SimpleExpr
+			typeCastNode, isTypeCasted := ch[2].(*ASTTypeCastNode)
 			_, ok := ch[1].(*ASTEpsilon)
 			if ok {
+				if isTypeCasted {
+					return &ASTTypeCastNode{
+						Type: typeCastNode.Type,
+						Expr: ch[0],
+					}
+				}
 				return ch[0]
+
+			}
+			if isTypeCasted {
+				return &ASTTypeCastNode{
+					Type: typeCastNode.Type,
+					Expr: ch[1],
+				}
 			}
 			return ch[1]
 		},
 	})
+	g.Rules = append(g.Rules, Rule{
+		LHS: "ExprTail",
+		RHS: []Symbol{As, "TypeRule"},
+		Action: func(ch []ASTNode) ASTNode {
+			return &ASTTypeCastNode{Type: ch[1].(*ASTTypeNode).Name}
+		},
+	})
 
+	g.Rules = append(g.Rules, Rule{
+		LHS: "ExprTail",
+		RHS: []Symbol{},
+		Action: func(ch []ASTNode) ASTNode {
+			return &ASTEpsilon{}
+		},
+	})
 	// — ExprPrime → RelOp SimpleExpr ExprPrime
 	g.Rules = append(g.Rules, Rule{
 		LHS: "ExprPrime",
@@ -370,6 +399,18 @@ func NewGrammar() *Grammar {
 			blk := ch[1].(*ASTBlockNode)
 			blk.Name = "Block"
 			return blk
+		},
+	})
+
+	g.Rules = append(g.Rules, Rule{
+		LHS: "Statement",
+		RHS: []Symbol{While, "Expr", "Block"},
+		Action: func(ch []ASTNode) ASTNode {
+			whileNode := ASTWhileNode{
+				Condition: ch[1],
+				Block:     ch[2].(*ASTBlockNode),
+			}
+			return &whileNode
 		},
 	})
 

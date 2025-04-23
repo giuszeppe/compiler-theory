@@ -16,6 +16,9 @@ type ASTVisitor interface {
 	VisitProgramNode(node *ASTProgramNode)
 	VisitPrintNode(node *ASTPrintNode)
 	VisitIfNode(node *ASTIfNode)
+	VisitWhileNode(node *ASTWhileNode)
+	VisitEpsilon(node *ASTEpsilon)
+	VisitTypeCastNode(node *ASTTypeCastNode)
 	IncTabCount()
 	DecTabCount()
 }
@@ -135,7 +138,7 @@ func (b *ASTPrintNode) Accept(visitor ASTVisitor) {
 type ASTEpsilon struct{}
 
 func (b *ASTEpsilon) Accept(visitor ASTVisitor) {
-	fmt.Println("Epsilon")
+	visitor.VisitEpsilon(b)
 }
 
 type ASTOpList struct {
@@ -157,4 +160,22 @@ type ASTIfNode struct {
 
 func (n *ASTIfNode) Accept(visitor ASTVisitor) {
 	visitor.VisitIfNode(n)
+}
+
+type ASTWhileNode struct {
+	Condition ASTNode
+	Block     ASTNode
+}
+
+func (n *ASTWhileNode) Accept(visitor ASTVisitor) {
+	visitor.VisitWhileNode(n)
+}
+
+type ASTTypeCastNode struct {
+	Type string
+	Expr ASTNode
+}
+
+func (n *ASTTypeCastNode) Accept(visitor ASTVisitor) {
+	visitor.VisitTypeCastNode(n)
 }
