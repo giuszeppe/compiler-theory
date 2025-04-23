@@ -19,6 +19,7 @@ type ASTVisitor interface {
 	VisitWhileNode(node *ASTWhileNode)
 	VisitEpsilon(node *ASTEpsilon)
 	VisitTypeCastNode(node *ASTTypeCastNode)
+	VisitForNode(node *ASTForNode)
 	IncTabCount()
 	DecTabCount()
 }
@@ -178,4 +179,15 @@ type ASTTypeCastNode struct {
 
 func (n *ASTTypeCastNode) Accept(visitor ASTVisitor) {
 	visitor.VisitTypeCastNode(n)
+}
+
+type ASTForNode struct {
+	VarDecl   ASTNode
+	Condition ASTNode
+	Increment ASTNode
+	Block     ASTNode
+}
+
+func (n *ASTForNode) Accept(visitor ASTVisitor) {
+	visitor.VisitForNode(n)
 }

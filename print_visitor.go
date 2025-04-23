@@ -136,3 +136,29 @@ func (v *PrintNodesVisitor) VisitEpsilon(node *ASTEpsilon) {
 	v.IncTabCount()
 	v.DecTabCount()
 }
+
+func (v *PrintNodesVisitor) VisitForNode(node *ASTForNode) {
+	v.NodeCount++
+	fmt.Println(strings.Repeat("\t", v.TabCount), "For node =>")
+	v.IncTabCount()
+
+	fmt.Println(strings.Repeat("\t", v.TabCount), "For var decl =>")
+	v.IncTabCount()
+	node.VarDecl.Accept(v)
+	v.DecTabCount()
+
+	fmt.Println(strings.Repeat("\t", v.TabCount), "For condition =>")
+	v.IncTabCount()
+	node.Condition.Accept(v)
+	v.DecTabCount()
+
+	fmt.Println(strings.Repeat("\t", v.TabCount), "For increment =>")
+	v.IncTabCount()
+	node.Increment.Accept(v)
+	v.DecTabCount()
+
+	fmt.Println(strings.Repeat("\t", v.TabCount), "For block =>")
+	v.IncTabCount()
+	node.Block.Accept(v)
+	v.DecTabCount()
+}

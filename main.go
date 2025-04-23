@@ -6,10 +6,10 @@ import (
 )
 
 func main() {
-	program := `while (3) {
+	program := `for (; i< 5;) {
 		let x:int = 3;
 		x = 3 + 4 + (5 * (6 as float) as int);
-		if (x) {
+		if (x > 3) {
 			let y:int = 3;
 			y = 3 + 4 + 5 * 6;
 		}
@@ -133,33 +133,35 @@ func NewGrammar() *Grammar {
 		},
 	})
 
-	// — Expr → SimpleExpr ExprPrime
+	// — Expr → SimpleExpr ExprPrime ExprTail
 	g.Rules = append(g.Rules, Rule{
 		LHS: "Expr",
 		RHS: []Symbol{"SimpleExpr", "ExprPrime", "ExprTail"},
 		Action: func(ch []ASTNode) ASTNode {
-			// if ExprPrime is just ε, it returns SimpleExpr
+			node := ch[0] // the first term (e.g., "2")
 			typeCastNode, isTypeCasted := ch[2].(*ASTTypeCastNode)
-			_, ok := ch[1].(*ASTEpsilon)
-			if ok {
-				if isTypeCasted {
-					return &ASTTypeCastNode{
-						Type: typeCastNode.Type,
-						Expr: ch[0],
-					}
-				}
-				return ch[0]
 
+			opListExpr := ch[1].(*ASTExpressionNode)
+			opList := opListExpr.Expr.(*ASTOpList)
+
+			for _, pair := range opList.Pairs {
+				node = &ASTBinaryOpNode{
+					Operator: pair.Op,
+					Left:     node,
+					Right:    pair.Right,
+				}
 			}
+
 			if isTypeCasted {
 				return &ASTTypeCastNode{
 					Type: typeCastNode.Type,
-					Expr: ch[1],
+					Expr: node,
 				}
 			}
-			return ch[1]
+			return node
 		},
 	})
+	// — ExprTail → "as" TypeRule
 	g.Rules = append(g.Rules, Rule{
 		LHS: "ExprTail",
 		RHS: []Symbol{As, "TypeRule"},
@@ -168,6 +170,7 @@ func NewGrammar() *Grammar {
 		},
 	})
 
+	// — ExprTail → ε
 	g.Rules = append(g.Rules, Rule{
 		LHS: "ExprTail",
 		RHS: []Symbol{},
@@ -175,22 +178,37 @@ func NewGrammar() *Grammar {
 			return &ASTEpsilon{}
 		},
 	})
+
 	// — ExprPrime → RelOp SimpleExpr ExprPrime
 	g.Rules = append(g.Rules, Rule{
 		LHS: "ExprPrime",
 		RHS: []Symbol{RelOpToken, "SimpleExpr", "ExprPrime"},
 		Action: func(ch []ASTNode) ASTNode {
-			// ch[0] is *ASTSimpleExpression wrapping the relop token:
 			op := ch[0].(*ASTSimpleExpression).Token.Lexeme
-			left := ch[1]
-			rightTail := ch[2].(*ASTExpressionNode)
-			// build a binary op and then possibly flatten with rightTail
-			bin := &ASTBinaryOpNode{
-				Operator: op,
-				Left:     left,
-				Right:    rightTail.Expr,
+			term := ch[1]
+			tailExpr := ch[2].(*ASTExpressionNode)
+			tail := tailExpr.Expr.(*ASTOpList)
+
+			pairs := append([]struct {
+				Op    string
+				Right ASTNode
+			}{{op, term}}, tail.Pairs...)
+
+			return &ASTExpressionNode{
+				Expr: &ASTOpList{Pairs: pairs},
 			}
-			return bin // type‑checking later
+			// ch[0] is *ASTSimpleExpression wrapping the relop token:
+			// op := ch[0].(*ASTSimpleExpression).Token.Lexeme
+			// fmt.Println("op", op, ch[1], ch[2])
+			// left := ch[1]
+			// rightTail := ch[2]
+			// // build a binary op and then possibly flatten with rightTail
+			// bin := &ASTBinaryOpNode{
+			// 	Operator: op,
+			// 	Left:     left,
+			// 	Right:    rightTail,
+			// }
+			// return bin // type‑checking later
 		},
 	})
 
@@ -200,7 +218,9 @@ func NewGrammar() *Grammar {
 		RHS: []Symbol{},
 		Action: func(ch []ASTNode) ASTNode {
 			if len(ch) == 0 {
-				return &ASTEpsilon{}
+				return &ASTExpressionNode{
+					Expr: &ASTOpList{},
+				}
 			}
 			return ch[0]
 		},
@@ -402,6 +422,7 @@ func NewGrammar() *Grammar {
 		},
 	})
 
+	// - While -> 'while'  Expr  <Block>
 	g.Rules = append(g.Rules, Rule{
 		LHS: "Statement",
 		RHS: []Symbol{While, "Expr", "Block"},
@@ -411,6 +432,63 @@ func NewGrammar() *Grammar {
 				Block:     ch[2].(*ASTBlockNode),
 			}
 			return &whileNode
+		},
+	})
+
+	// - For -> 'for' '(' Assignment ';' Expr ';' Assignment ')' <Block>
+	g.Rules = append(g.Rules, Rule{
+		LHS: "Statement",
+		RHS: []Symbol{For, LeftParenToken, "ForVarDecl", SemicolonToken, "Expr", SemicolonToken, "ForAssignment", RightParenToken, "Block"},
+		Action: func(ch []ASTNode) ASTNode {
+			forNode := ASTForNode{
+				VarDecl:   ch[2],
+				Condition: ch[4],
+				Increment: ch[6],
+				Block:     ch[8].(*ASTBlockNode),
+			}
+			return &forNode
+		},
+	})
+
+	g.Rules = append(g.Rules, Rule{
+		LHS: "ForVarDecl",
+		RHS: []Symbol{Let, Identifier, ColonToken, "TypeRule", EqualsToken, "Expr"},
+		Action: func(ch []ASTNode) ASTNode {
+			return &ASTVarDeclNode{
+				Name:       ch[1].(*ASTSimpleExpression).Token.Lexeme,
+				Type:       ch[3].(*ASTTypeNode).Name,
+				Expression: ch[5],
+			}
+		},
+	})
+
+	g.Rules = append(g.Rules, Rule{
+		LHS: "ForVarDecl",
+		RHS: []Symbol{},
+		Action: func(ch []ASTNode) ASTNode {
+			return &ASTEpsilon{}
+		},
+	})
+
+	g.Rules = append(g.Rules, Rule{
+		LHS: "ForAssignment",
+		RHS: []Symbol{Identifier, EqualsToken, "Expr"},
+		Action: func(ch []ASTNode) ASTNode {
+			// ch[0] is *ASTSimpleExpression wrapping the var token
+			varTok := ch[0].(*ASTSimpleExpression).Token
+			exprN := ch[2]
+			return &ASTAssignmentNode{
+				Id:   ASTVariableNode{Token: varTok},
+				Expr: exprN,
+			}
+		},
+	})
+
+	g.Rules = append(g.Rules, Rule{
+		LHS: "ForAssignment",
+		RHS: []Symbol{},
+		Action: func(ch []ASTNode) ASTNode {
+			return &ASTEpsilon{}
 		},
 	})
 

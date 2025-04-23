@@ -70,6 +70,12 @@ func (t TokenType) String() string {
 		return "If"
 	case Else:
 		return "Else"
+	case While:
+		return "While"
+	case For:
+		return "For"
+	case Fun:
+		return "Fun"
 	default:
 		return "Unknown"
 	}
@@ -114,6 +120,9 @@ const (
 	End
 	If
 	Else
+	While
+	For
+	Fun
 
 	// Type
 	IntType
@@ -410,6 +419,12 @@ func getKeywordTokenByLexeme(lexeme string) (Token, bool) {
 		return Token{If, lexeme}, true
 	case "else":
 		return Token{Else, lexeme}, true
+	case "while":
+		return Token{While, lexeme}, true
+	case "for":
+		return Token{For, lexeme}, true
+	case "fun":
+		return Token{Fun, lexeme}, true
 	default:
 		return Token{}, false
 	}
