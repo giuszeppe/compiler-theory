@@ -8,6 +8,7 @@ import (
 func main() {
 	program := `if (3) {
 		let x:int = 3;
+		x = 3 + 4 + 5 * 6;
 	} else {
 	 	let y:int = 4;
 	}`
@@ -136,12 +137,10 @@ func NewGrammar() *Grammar {
 		RHS: []Symbol{"SimpleExpr", "ExprPrime"},
 		Action: func(ch []ASTNode) ASTNode {
 			// if ExprPrime is just ε, it returns SimpleExpr wrapped as ASTExpressionNode
-			expr, ok := ch[1].(*ASTExpressionNode)
+			fmt.Println("Expr -> SimpleExpr ExprPrime", ch)
+			_, ok := ch[1].(*ASTEpsilon)
 			if ok {
-				_, ok := expr.Expr.(*ASTEpsilon)
-				if ok {
-					return ch[0]
-				}
+				return ch[0]
 			}
 			return ch[1]
 		},
@@ -162,7 +161,7 @@ func NewGrammar() *Grammar {
 				Left:     left,
 				Right:    rightTail.Expr,
 			}
-			return &ASTExpressionNode{Expr: bin, Type: ""} // type‑checking later
+			return bin // type‑checking later
 		},
 	})
 
@@ -172,7 +171,7 @@ func NewGrammar() *Grammar {
 		RHS: []Symbol{},
 		Action: func(ch []ASTNode) ASTNode {
 			if len(ch) == 0 {
-				return &ASTExpressionNode{Expr: &ASTEpsilon{}}
+				return &ASTEpsilon{}
 			}
 			return ch[0]
 		},
@@ -196,9 +195,8 @@ func NewGrammar() *Grammar {
 				}
 			}
 
-			return &ASTExpressionNode{
-				Expr: node,
-			}
+			return node
+
 		},
 	})
 
@@ -255,9 +253,7 @@ func NewGrammar() *Grammar {
 				}
 			}
 
-			return &ASTExpressionNode{
-				Expr: node,
-			}
+			return node
 		},
 	})
 
@@ -303,10 +299,7 @@ func NewGrammar() *Grammar {
 		Action: func(ch []ASTNode) ASTNode {
 			tok := ch[0].(*ASTSimpleExpression).Token
 			v, _ := strconv.Atoi(tok.Lexeme)
-			return &ASTExpressionNode{
-				Expr: &ASTIntegerNode{Name: tok.Lexeme, Value: v},
-				Type: "int",
-			}
+			return &ASTIntegerNode{Name: tok.Lexeme, Value: v}
 		},
 	})
 
@@ -316,10 +309,7 @@ func NewGrammar() *Grammar {
 		RHS: []Symbol{Identifier},
 		Action: func(ch []ASTNode) ASTNode {
 			tok := ch[0].(*ASTSimpleExpression).Token
-			return &ASTExpressionNode{
-				Expr: &ASTVariableNode{Token: tok},
-				Type: "",
-			}
+			return &ASTVariableNode{Token: tok}
 		},
 	})
 

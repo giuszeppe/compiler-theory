@@ -46,7 +46,6 @@ func (v *PrintNodesVisitor) VisitVarDeclNode(node *ASTVarDeclNode) {
 	fmt.Print(strings.Repeat("\t", v.TabCount), "Var decl node => ")
 	fmt.Printf("%v %v\n", node.Name, node.Type)
 	v.IncTabCount()
-	v.IncTabCount()
 	node.Expression.Accept(v)
 
 	v.DecTabCount()
