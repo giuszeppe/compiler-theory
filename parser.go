@@ -78,6 +78,10 @@ func (p *Parser) Parse(g *Grammar) (ASTNode, error) {
 			}
 			break
 		}
+		if tokens[pos].Type == WhitespaceToken || tokens[pos].Type == NewLineToken || tokens[pos].Type == CommentSingleLine || tokens[pos].Type == CommentMultiLine {
+			pos++
+			continue
+		}
 
 		// look at innermost frame
 		topFrame := &stack[len(stack)-1]
@@ -87,8 +91,7 @@ func (p *Parser) Parse(g *Grammar) (ASTNode, error) {
 			completed := astStack[len(astStack)-1]
 			astStack = astStack[:len(astStack)-1]
 
-			var node ASTNode
-			node = completed.act(completed.children)
+			node := completed.act(completed.children)
 
 			parent := &astStack[len(astStack)-1]
 			parent.children = append(parent.children, node)

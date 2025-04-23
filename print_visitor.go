@@ -87,14 +87,30 @@ func (v *PrintNodesVisitor) VisitSimpleExpressionNode(node *ASTSimpleExpression)
 func (v *PrintNodesVisitor) VisitProgramNode(node *ASTProgramNode) {
 	v.NodeCount++
 	fmt.Println(strings.Repeat("\t", v.TabCount), "Program node =>")
-    node.Block.Accept(v)
+	node.Block.Accept(v)
 	v.IncTabCount()
 	v.DecTabCount()
 }
 func (v *PrintNodesVisitor) VisitPrintNode(node *ASTPrintNode) {
 	v.NodeCount++
 	fmt.Println(strings.Repeat("\t", v.TabCount), "Print node =>")
-    node.Expr.Accept(v)
+	node.Expr.Accept(v)
 	v.IncTabCount()
+	v.DecTabCount()
+}
+
+func (v *PrintNodesVisitor) VisitIfNode(node *ASTIfNode) {
+	v.NodeCount++
+	fmt.Println(strings.Repeat("\t", v.TabCount), "If node =>")
+	v.IncTabCount()
+	node.Condition.Accept(v)
+	node.ThenBlock.Accept(v)
+	v.DecTabCount()
+	v.DecTabCount()
+	fmt.Println(strings.Repeat("\t", v.TabCount), "Else Block =>")
+	v.IncTabCount()
+	if node.ElseBlock != nil {
+		node.ElseBlock.Accept(v)
+	}
 	v.DecTabCount()
 }

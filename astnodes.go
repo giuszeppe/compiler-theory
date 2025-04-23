@@ -14,7 +14,8 @@ type ASTVisitor interface {
 	VisitExpressionNode(node *ASTExpressionNode)
 	VisitSimpleExpressionNode(node *ASTSimpleExpression)
 	VisitProgramNode(node *ASTProgramNode)
-    VisitPrintNode(node *ASTPrintNode)
+	VisitPrintNode(node *ASTPrintNode)
+	VisitIfNode(node *ASTIfNode)
 	IncTabCount()
 	DecTabCount()
 }
@@ -53,8 +54,8 @@ func (n *ASTVariableNode) Accept(visitor ASTVisitor) {
 }
 
 type ASTAssignmentNode struct {
-	Id   ASTVariableNode   // usually a VariableNode
-	Expr ASTExpressionNode // usually an Expression Node
+	Id   ASTVariableNode // usually a VariableNode
+	Expr ASTNode         // usually an Expression Node
 }
 
 func (n *ASTAssignmentNode) Accept(visitor ASTVisitor) {
@@ -80,7 +81,7 @@ func (n *ASTTypeNode) Accept(visitor ASTVisitor) {
 type ASTVarDeclNode struct {
 	Name       string
 	Type       string
-	Expression ASTExpressionNode
+	Expression ASTNode
 }
 
 func (n *ASTVarDeclNode) Accept(visitor ASTVisitor) {
@@ -131,10 +132,10 @@ func (b *ASTPrintNode) Accept(visitor ASTVisitor) {
 	visitor.VisitPrintNode(b)
 }
 
-type ASTEpsilon struct {}
+type ASTEpsilon struct{}
 
 func (b *ASTEpsilon) Accept(visitor ASTVisitor) {
-    fmt.Println("Epsilon")
+	fmt.Println("Epsilon")
 }
 
 type ASTOpList struct {
@@ -143,6 +144,17 @@ type ASTOpList struct {
 		Right ASTNode
 	}
 }
+
 func (b *ASTOpList) Accept(visitor ASTVisitor) {
-    fmt.Println("ASTOpList")
+	fmt.Println("ASTOpList")
+}
+
+type ASTIfNode struct {
+	Condition ASTNode
+	ThenBlock ASTNode
+	ElseBlock ASTNode
+}
+
+func (n *ASTIfNode) Accept(visitor ASTVisitor) {
+	visitor.VisitIfNode(n)
 }

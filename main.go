@@ -6,11 +6,14 @@ import (
 )
 
 func main() {
-	program := "x=2*3*4*(5*6);"
+	program := `if (3) {
+		let x:int = 3;
+	} else {
+	 	let y:int = 4;
+	}`
 	parser := NewParser(program)
 	printVisitor := PrintNodesVisitor{}
 	grammar := NewGrammar()
-	printParsingTable(grammar)
 	node, err := parser.Parse(grammar)
 	if err != nil {
 		panic(err)
@@ -74,19 +77,23 @@ func NewGrammar() *Grammar {
 		Action: func(ch []ASTNode) ASTNode {
 			// ch[0] and ch[1] were terminals; ch[2] is *ASTExpressionNode
 			varTok := ch[0].(*ASTSimpleExpression).Token
-			exprN := ch[2].(*ASTExpressionNode)
+			exprN := ch[2]
 			return &ASTAssignmentNode{
 				Id:   ASTVariableNode{Token: varTok},
-				Expr: *exprN,
+				Expr: exprN,
 			}
 		},
 	})
 	// — Statement → VariableDecl ';'
 	g.Rules = append(g.Rules, Rule{
 		LHS: "Statement",
-		RHS: []Symbol{Let, WhitespaceToken, Identifier, ColonToken, "TypeRule", EqualsToken, "Expr", SemicolonToken},
+		RHS: []Symbol{Let, Identifier, ColonToken, "TypeRule", EqualsToken, "Expr", SemicolonToken},
 		Action: func(ch []ASTNode) ASTNode {
-			return &ASTVarDeclNode{}
+			return &ASTVarDeclNode{
+				Name:       ch[1].(*ASTSimpleExpression).Token.Lexeme,
+				Type:       ch[3].(*ASTTypeNode).Name,
+				Expression: ch[5],
+			}
 		},
 	})
 
@@ -192,30 +199,13 @@ func NewGrammar() *Grammar {
 			return &ASTExpressionNode{
 				Expr: node,
 			}
-			// expr, ok := ch[1].(*ASTExpressionNode)
-			// if ok {
-			// 	_, ok := expr.Expr.(*ASTEpsilon)
-			// 	if ok {
-			// 		return ch[0]
-			// 	}
-			// }
-			// rightBin, isBin := expr.Expr.(*ASTBinaryOpNode)
-			// if isBin {
-			// 	_, isEps := rightBin.Right.(*ASTEpsilon)
-			// 	if isEps {
-			// 		rightBin.Right = ch[0]
-			// 		return expr
-			// 	}
-			// }
-			// bin := ASTBinaryOpNode{Left: ch[0], Right: expr.Expr, Operator: "+"}
-			// return &ASTExpressionNode{Expr: &bin}
 		},
 	})
 
 	// — SimpleExprPrime → '+' Term SimpleExprPrime
 	g.Rules = append(g.Rules, Rule{
 		LHS: "SimpleExprPrime",
-		RHS: []Symbol{OperatorToken, "Term", "SimpleExprPrime"},
+		RHS: []Symbol{PlusToken, "Term", "SimpleExprPrime"},
 		Action: func(ch []ASTNode) ASTNode {
 			op := ch[0].(*ASTSimpleExpression).Token.Lexeme
 			term := ch[1]
@@ -252,27 +242,43 @@ func NewGrammar() *Grammar {
 		LHS: "Term",
 		RHS: []Symbol{"Factor", "TermPrime"},
 		Action: func(ch []ASTNode) ASTNode {
-			expr, ok := ch[1].(*ASTExpressionNode)
-			if ok {
-				_, ok := expr.Expr.(*ASTEpsilon)
-				if ok {
-					return ch[0]
+			node := ch[0] // the first term (e.g., "2")
+
+			opListExpr := ch[1].(*ASTExpressionNode)
+			opList := opListExpr.Expr.(*ASTOpList)
+
+			for _, pair := range opList.Pairs {
+				node = &ASTBinaryOpNode{
+					Operator: pair.Op,
+					Left:     node,
+					Right:    pair.Right,
 				}
 			}
-			return ch[1]
+
+			return &ASTExpressionNode{
+				Expr: node,
+			}
 		},
 	})
 
 	// — TermPrime → '*' Factor TermPrime
 	g.Rules = append(g.Rules, Rule{
 		LHS: "TermPrime",
-		RHS: []Symbol{OperatorToken, "Factor", "TermPrime"},
+		RHS: []Symbol{StarToken, "Factor", "TermPrime"},
 		Action: func(ch []ASTNode) ASTNode {
 			op := ch[0].(*ASTSimpleExpression).Token.Lexeme
-			left := ch[1]
-			rightTail := ch[2].(*ASTExpressionNode)
-			bin := &ASTBinaryOpNode{Operator: op, Left: left, Right: rightTail.Expr}
-			return &ASTExpressionNode{Expr: bin, Type: ""}
+			term := ch[1]
+			tailExpr := ch[2].(*ASTExpressionNode)
+			tail := tailExpr.Expr.(*ASTOpList)
+
+			pairs := append([]struct {
+				Op    string
+				Right ASTNode
+			}{{op, term}}, tail.Pairs...)
+
+			return &ASTExpressionNode{
+				Expr: &ASTOpList{Pairs: pairs},
+			}
 		},
 	})
 
@@ -282,7 +288,9 @@ func NewGrammar() *Grammar {
 		RHS: []Symbol{},
 		Action: func(ch []ASTNode) ASTNode {
 			if len(ch) == 0 {
-				return &ASTExpressionNode{Expr: &ASTEpsilon{}}
+				return &ASTExpressionNode{
+					Expr: &ASTOpList{},
+				}
 			}
 			return ch[0]
 		},
@@ -315,12 +323,63 @@ func NewGrammar() *Grammar {
 		},
 	})
 
-	// — Factor → '(' Expr ')'
+	// — Factor → SubExpr
 	g.Rules = append(g.Rules, Rule{
 		LHS: "Factor",
+		RHS: []Symbol{"SubExpr"},
+		Action: func(ch []ASTNode) ASTNode {
+			return ch[0]
+		},
+	})
+
+	// — SubExpr → '(' Expr ')'
+	g.Rules = append(g.Rules, Rule{
+		LHS: "SubExpr",
 		RHS: []Symbol{LeftParenToken, "Expr", RightParenToken},
 		Action: func(ch []ASTNode) ASTNode {
 			return ch[1] // the Expr inside
+		},
+	})
+
+	// - Statement → 'if' '(' Expr ')' <Block> [ 'else' <Block> ]
+	g.Rules = append(g.Rules, Rule{
+		LHS: "Statement",
+		RHS: []Symbol{If, "Expr", "Block", "IfTail"},
+		Action: func(ch []ASTNode) ASTNode {
+			ifNode := ASTIfNode{
+				Condition: ch[1],
+				ThenBlock: ch[2].(*ASTBlockNode),
+				ElseBlock: ch[3],
+			}
+			return &ifNode
+		},
+	})
+	// - IfTail → 'else' <Block>
+	g.Rules = append(g.Rules, Rule{
+		LHS: "IfTail",
+		RHS: []Symbol{Else, "Block"},
+		Action: func(ch []ASTNode) ASTNode {
+			return ch[1]
+		},
+	})
+
+	// - IfTail → ε
+	g.Rules = append(g.Rules, Rule{
+		LHS: "IfTail",
+		RHS: []Symbol{},
+		Action: func(ch []ASTNode) ASTNode {
+			return &ASTEpsilon{}
+		},
+	})
+	// - Block → '{' StmtList '}'
+	g.Rules = append(g.Rules, Rule{
+		LHS: "Block",
+		RHS: []Symbol{LeftCurlyToken, "StmtList", RightCurlyToken},
+		Action: func(ch []ASTNode) ASTNode {
+			// ch[1] is *ASTBlockNode
+			blk := ch[1].(*ASTBlockNode)
+			blk.Name = "Block"
+			return blk
 		},
 	})
 

@@ -66,6 +66,10 @@ func (t TokenType) String() string {
 		return "CommentMultiLine"
 	case NewLineToken:
 		return "Newline"
+	case If:
+		return "If"
+	case Else:
+		return "Else"
 	default:
 		return "Unknown"
 	}
@@ -77,6 +81,10 @@ const (
 	WhitespaceToken
 	// Op
 	EqualsToken
+	PlusToken
+	StarToken
+	MinusToken
+	SlashToken
 	// Syntax
 	SemicolonToken
 	LeftParenToken
@@ -104,6 +112,8 @@ const (
 	Let
 	Error
 	End
+	If
+	Else
 
 	// Type
 	IntType
@@ -177,21 +187,23 @@ const (
 )
 
 var finalStateToTokenType = map[int]TokenType{
-	StateWhitespace:            Whitespace,
-	StateEquals:                Equals,
-	StateSemicolon:             Semicolon,
-	StateLeftParen:             LeftParen,
-	StateRightParen:            RightParen,
-	StateMinus:                 OperatorToken,
-	StateStar:                  OperatorToken,
-	StateSlash:                 OperatorToken,
-	StatePlus:                  OperatorToken,
+	StateWhitespace: WhitespaceToken,
+	StateEquals:     EqualsToken,
+	StateSemicolon:  SemicolonToken,
+	StateLeftParen:  LeftParenToken,
+	StateRightParen: RightParenToken,
+
+	StateMinus: MinusToken,
+	StateStar:  StarToken,
+	StateSlash: SlashToken,
+	StatePlus:  PlusToken,
+
 	StateInt:                   Integer,
 	StateColon:                 ColonToken,
-	StateLeftCurly:             LeftCurly,
-	StateRightCurly:            RightCurly,
-	StateRelOp:                 RelOp,
-	StateComma:                 Comma,
+	StateLeftCurly:             LeftCurlyToken,
+	StateRightCurly:            RightCurlyToken,
+	StateRelOp:                 RelOpToken,
+	StateComma:                 CommaToken,
 	StateHex:                   HexNumber,
 	StateFloat:                 Float,
 	StateNewline:               NewLineToken,
@@ -394,6 +406,10 @@ func getKeywordTokenByLexeme(lexeme string) (Token, bool) {
 		return Token{True, lexeme}, true
 	case "false":
 		return Token{False, lexeme}, true
+	case "if":
+		return Token{If, lexeme}, true
+	case "else":
+		return Token{Else, lexeme}, true
 	default:
 		return Token{}, false
 	}
@@ -548,4 +564,3 @@ func isDigit(ch byte) bool {
 func isAlpha(ch byte) bool {
 	return (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z')
 }
-
