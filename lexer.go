@@ -22,15 +22,15 @@ func (t TokenType) String() string {
 		return "Whitespace"
 	case Equals:
 		return "Equals"
-	case Semicolon:
+	case SemicolonToken:
 		return "Semicolon"
-	case LeftParen:
+	case LeftParenToken:
 		return "LeftParen"
-	case RightParen:
+	case RightParenToken:
 		return "RightParen"
 	case Return:
 		return "Return"
-	case Plus:
+	case PlusToken:
 		return "Plus"
 	case Let:
 		return "Let"
@@ -432,7 +432,7 @@ func getKeywordTokenByLexeme(lexeme string) (Token, bool) {
 
 func getTypeTokenByLexeme(lexeme string) (Token, bool) {
 	switch lexeme {
-	case "colour":
+	case "color":
 		return Token{ColourType, lexeme}, true
 	case "int":
 		return Token{IntType, lexeme}, true

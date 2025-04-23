@@ -162,3 +162,39 @@ func (v *PrintNodesVisitor) VisitForNode(node *ASTForNode) {
 	node.Block.Accept(v)
 	v.DecTabCount()
 }
+
+func (v *PrintNodesVisitor) VisitFuncDeclNode(node *ASTFuncDeclNode) {
+	v.NodeCount++
+	fmt.Println(strings.Repeat("\t", v.TabCount), "Function decl node =>", node.Name, ":", node.ReturnType)
+	v.IncTabCount()
+
+	fmt.Println(strings.Repeat("\t", v.TabCount), "Function params =>")
+	v.IncTabCount()
+	node.Params.Accept(v)
+	v.DecTabCount()
+
+	fmt.Println(strings.Repeat("\t", v.TabCount), "Function block =>")
+	v.IncTabCount()
+	node.Block.Accept(v)
+	v.DecTabCount()
+}
+func (v *PrintNodesVisitor) VisitFormalParamsNode(node *ASTFormalParamsNode) {
+	v.NodeCount++
+	fmt.Println(strings.Repeat("\t", v.TabCount), "Formal params node =>")
+	v.IncTabCount()
+	for _, param := range node.Params {
+		param.Accept(v)
+	}
+	v.DecTabCount()
+}
+func (v *PrintNodesVisitor) VisitFormalParamNode(node *ASTFormalParamNode) {
+	v.NodeCount++
+	fmt.Println(strings.Repeat("\t", v.TabCount), "Formal param node:: ", node.Name, ":", node.Type)
+}
+func (v *PrintNodesVisitor) VisitTypeNode(node *ASTTypeNode) {
+	v.NodeCount++
+	fmt.Println(strings.Repeat("\t", v.TabCount), "Type node =>")
+	v.IncTabCount()
+	fmt.Printf("%v\n", node.Name)
+	v.DecTabCount()
+}

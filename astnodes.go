@@ -20,6 +20,12 @@ type ASTVisitor interface {
 	VisitEpsilon(node *ASTEpsilon)
 	VisitTypeCastNode(node *ASTTypeCastNode)
 	VisitForNode(node *ASTForNode)
+
+	VisitFuncDeclNode(node *ASTFuncDeclNode)
+	VisitFormalParamsNode(node *ASTFormalParamsNode)
+	VisitFormalParamNode(node *ASTFormalParamNode)
+	VisitTypeNode(node *ASTTypeNode)
+
 	IncTabCount()
 	DecTabCount()
 }
@@ -190,4 +196,32 @@ type ASTForNode struct {
 
 func (n *ASTForNode) Accept(visitor ASTVisitor) {
 	visitor.VisitForNode(n)
+}
+
+type ASTFormalParamsNode struct {
+	Params []ASTNode
+}
+
+func (n *ASTFormalParamsNode) Accept(visitor ASTVisitor) {
+	visitor.VisitFormalParamsNode(n)
+}
+
+type ASTFuncDeclNode struct {
+	Name       string
+	ReturnType string
+	Params     ASTNode
+	Block      ASTNode
+}
+
+func (n *ASTFuncDeclNode) Accept(visitor ASTVisitor) {
+	visitor.VisitFuncDeclNode(n)
+}
+
+type ASTFormalParamNode struct {
+	Name string
+	Type string
+}
+
+func (n *ASTFormalParamNode) Accept(visitor ASTVisitor) {
+	visitor.VisitFormalParamNode(n)
 }

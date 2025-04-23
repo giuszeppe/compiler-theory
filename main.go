@@ -6,12 +6,17 @@ import (
 )
 
 func main() {
-	program := `for (; i< 5;) {
-		let x:int = 3;
-		x = 3 + 4 + (5 * (6 as float) as int);
-		if (x > 3) {
-			let y:int = 3;
-			y = 3 + 4 + 5 * 6;
+	program := `fun main(x:int, y:float) -> int {
+		let a:int = 2;
+		let c:color = a + b;
+		let d:bool = a == b;
+
+		if (a == b) {
+			c = a + b;
+		} else {
+		 	for (let i:int = 0; i < 10; i = i + 1) {
+				c = a + b;
+			}
 		}
 	}`
 	parser := NewParser(program)
@@ -105,7 +110,9 @@ func NewGrammar() *Grammar {
 		LHS: "TypeRule",
 		RHS: []Symbol{FloatType},
 		Action: func(ch []ASTNode) ASTNode {
-			return &ASTTypeNode{}
+			return &ASTTypeNode{
+				Name: ch[0].(*ASTSimpleExpression).Token.Lexeme,
+			}
 		},
 	})
 	// — TypeRule → 'float' | 'int' | 'color' | 'bool' |
@@ -113,7 +120,9 @@ func NewGrammar() *Grammar {
 		LHS: "TypeRule",
 		RHS: []Symbol{IntType},
 		Action: func(ch []ASTNode) ASTNode {
-			return &ASTTypeNode{}
+			return &ASTTypeNode{
+				Name: ch[0].(*ASTSimpleExpression).Token.Lexeme,
+			}
 		},
 	})
 	// — TypeRule → 'float' | 'int' | 'color' | 'bool' |
@@ -121,7 +130,10 @@ func NewGrammar() *Grammar {
 		LHS: "TypeRule",
 		RHS: []Symbol{BoolType},
 		Action: func(ch []ASTNode) ASTNode {
-			return &ASTTypeNode{}
+			return &ASTTypeNode{
+				Name: ch[0].(*ASTSimpleExpression).Token.Lexeme,
+			}
+
 		},
 	})
 	// — TypeRule → 'float' | 'int' | 'color' | 'bool' |
@@ -129,7 +141,9 @@ func NewGrammar() *Grammar {
 		LHS: "TypeRule",
 		RHS: []Symbol{ColourType},
 		Action: func(ch []ASTNode) ASTNode {
-			return &ASTTypeNode{}
+			return &ASTTypeNode{
+				Name: ch[0].(*ASTSimpleExpression).Token.Lexeme,
+			}
 		},
 	})
 
@@ -422,7 +436,7 @@ func NewGrammar() *Grammar {
 		},
 	})
 
-	// - While -> 'while'  Expr  <Block>
+	// - Statement -> 'while'  Expr  <Block>
 	g.Rules = append(g.Rules, Rule{
 		LHS: "Statement",
 		RHS: []Symbol{While, "Expr", "Block"},
@@ -435,7 +449,7 @@ func NewGrammar() *Grammar {
 		},
 	})
 
-	// - For -> 'for' '(' Assignment ';' Expr ';' Assignment ')' <Block>
+	// - Statement -> 'for' '(' Assignment ';' Expr ';' Assignment ')' <Block>
 	g.Rules = append(g.Rules, Rule{
 		LHS: "Statement",
 		RHS: []Symbol{For, LeftParenToken, "ForVarDecl", SemicolonToken, "Expr", SemicolonToken, "ForAssignment", RightParenToken, "Block"},
@@ -449,7 +463,7 @@ func NewGrammar() *Grammar {
 			return &forNode
 		},
 	})
-
+	// - ForVarDecl → 'let' Identifier ':' TypeRule '=' Expr
 	g.Rules = append(g.Rules, Rule{
 		LHS: "ForVarDecl",
 		RHS: []Symbol{Let, Identifier, ColonToken, "TypeRule", EqualsToken, "Expr"},
@@ -461,7 +475,7 @@ func NewGrammar() *Grammar {
 			}
 		},
 	})
-
+	// - ForVarDecl → ε
 	g.Rules = append(g.Rules, Rule{
 		LHS: "ForVarDecl",
 		RHS: []Symbol{},
@@ -470,6 +484,7 @@ func NewGrammar() *Grammar {
 		},
 	})
 
+	// - ForAssignment → Identifier '=' Expr
 	g.Rules = append(g.Rules, Rule{
 		LHS: "ForAssignment",
 		RHS: []Symbol{Identifier, EqualsToken, "Expr"},
@@ -483,12 +498,81 @@ func NewGrammar() *Grammar {
 			}
 		},
 	})
-
+	// - ForAssignment → ε
 	g.Rules = append(g.Rules, Rule{
 		LHS: "ForAssignment",
 		RHS: []Symbol{},
 		Action: func(ch []ASTNode) ASTNode {
 			return &ASTEpsilon{}
+		},
+	})
+	// - Statement → Fun Identifier '(' FormalParams ')' '->' TypeRule Block
+	g.Rules = append(g.Rules, Rule{
+		LHS: "Statement",
+		RHS: []Symbol{Fun, Identifier, LeftParenToken, "FormalParams", RightParenToken, LeftArrowToken, "TypeRule", "Block"},
+		Action: func(ch []ASTNode) ASTNode {
+			return &ASTFuncDeclNode{
+				Name:       ch[1].(*ASTSimpleExpression).Token.Lexeme,
+				Params:     ch[3],
+				ReturnType: ch[6].(*ASTTypeNode).Name,
+				Block:      ch[7].(*ASTBlockNode),
+			}
+		},
+	})
+
+	// - FormalParams → Identifier ':' TypeRule FormalParamsTail
+	g.Rules = append(g.Rules, Rule{
+		LHS: "FormalParams",
+		RHS: []Symbol{Identifier, ColonToken, "TypeRule", "FormalParamsTail"},
+		Action: func(ch []ASTNode) ASTNode {
+			param := ASTFormalParamNode{
+				Name: ch[0].(*ASTSimpleExpression).Token.Lexeme,
+				Type: ch[2].(*ASTTypeNode).Name,
+			}
+			tail := ch[3].(*ASTFormalParamsNode)
+
+			return &ASTFormalParamsNode{
+				Params: append([]ASTNode{&param}, tail.Params...),
+			}
+		},
+	})
+
+	// - FormalParamsTail → ',' Identifier ':' TypeRule FormalParamsTail
+	g.Rules = append(g.Rules, Rule{
+		LHS: "FormalParamsTail",
+		RHS: []Symbol{CommaToken, Identifier, ColonToken, "TypeRule", "FormalParamsTail"},
+		Action: func(ch []ASTNode) ASTNode {
+			param := ASTFormalParamNode{
+				Name: ch[1].(*ASTSimpleExpression).Token.Lexeme,
+				Type: ch[3].(*ASTTypeNode).Name,
+			}
+			tail := ch[4].(*ASTFormalParamsNode)
+
+			return &ASTFormalParamsNode{
+				Params: append([]ASTNode{&param}, tail.Params...),
+			}
+		},
+	})
+
+	// - FormalParamsTail → ε
+	g.Rules = append(g.Rules, Rule{
+		LHS: "FormalParamsTail",
+		RHS: []Symbol{},
+		Action: func(ch []ASTNode) ASTNode {
+			return &ASTFormalParamsNode{
+				Params: []ASTNode{},
+			}
+		},
+	})
+
+	// - FormalParams → ε
+	g.Rules = append(g.Rules, Rule{
+		LHS: "FormalParams",
+		RHS: []Symbol{},
+		Action: func(ch []ASTNode) ASTNode {
+			return &ASTFormalParamsNode{
+				Params: []ASTNode{},
+			}
 		},
 	})
 
