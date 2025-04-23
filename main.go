@@ -10,6 +10,7 @@ func main() {
 		let a:int = 2;
 		let c:color = a + b;
 		let d:bool = a == b;
+		let e:float = 2.5;
 
 		if (a == b) {
 			c = a + b;
@@ -363,6 +364,17 @@ func NewGrammar() *Grammar {
 			tok := ch[0].(*ASTSimpleExpression).Token
 			v, _ := strconv.Atoi(tok.Lexeme)
 			return &ASTIntegerNode{Name: tok.Lexeme, Value: v}
+		},
+	})
+
+	// — Factor → FloatLiteral
+	g.Rules = append(g.Rules, Rule{
+		LHS: "Factor",
+		RHS: []Symbol{Float},
+		Action: func(ch []ASTNode) ASTNode {
+			tok := ch[0].(*ASTSimpleExpression).Token
+			v, _ := strconv.ParseFloat(tok.Lexeme, 64)
+			return &ASTFloatNode{Name: tok.Lexeme, Value: v}
 		},
 	})
 

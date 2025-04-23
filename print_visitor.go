@@ -198,3 +198,8 @@ func (v *PrintNodesVisitor) VisitTypeNode(node *ASTTypeNode) {
 	fmt.Printf("%v\n", node.Name)
 	v.DecTabCount()
 }
+
+func (v *PrintNodesVisitor) VisitFloatNode(node *ASTFloatNode) {
+	v.NodeCount++
+	fmt.Println(strings.Repeat("\t", v.TabCount), "Float value::", node.Value)
+}
