@@ -274,3 +274,13 @@ type ASTActualParamNode struct {
 func (n *ASTActualParamNode) Accept(visitor ASTVisitor) {
 	visitor.VisitActualParamNode(n)
 }
+
+type ASTUnaryOpNode struct {
+	Operator string
+	Operand  ASTNode
+}
+
+func (n *ASTUnaryOpNode) Accept(visitor ASTVisitor) {
+	// Implement the Accept method for ASTUnaryOpNode
+	fmt.Println("Visiting ASTUnaryOpNode")
+}

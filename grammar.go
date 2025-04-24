@@ -737,6 +737,7 @@ func NewGrammar() *Grammar {
 		},
 	})
 
+	// - Statement → Block
 	g.Rules = append(g.Rules, Rule{
 		LHS: "Statement",
 		RHS: []Symbol{"Block"},
@@ -744,6 +745,27 @@ func NewGrammar() *Grammar {
 			// ch[0] is *ASTBlockNode
 			blk := ch[0].(*ASTBlockNode)
 			return &ASTBlockNode{Name: "Statement", Stmts: blk.Stmts}
+		},
+	})
+
+	// - Factor -> Unary
+	g.Rules = append(g.Rules, Rule{
+		LHS: "Factor",
+		RHS: []Symbol{"Unary"},
+		Action: func(ch []ASTNode) ASTNode {
+			return ch[0]
+		},
+	})
+
+	// - Unary -> '-' Factor
+	g.Rules = append(g.Rules, Rule{
+		LHS: "Unary",
+		RHS: []Symbol{MinusToken, "Factor"},
+		Action: func(ch []ASTNode) ASTNode {
+			return &ASTUnaryOpNode{
+				Operator: ch[0].(*ASTSimpleExpression).Token.Lexeme,
+				Operand:  ch[1],
+			}
 		},
 	})
 

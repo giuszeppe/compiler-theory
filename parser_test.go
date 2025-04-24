@@ -120,6 +120,12 @@ func assertASTNodeEqual(t *testing.T, expected, actual ASTNode) {
 		a := actual.(*ASTWhileNode)
 		assertASTNodeEqual(t, e.Condition, a.Condition)
 		assertASTNodeEqual(t, e.Block, a.Block)
+	case *ASTUnaryOpNode:
+		a := actual.(*ASTUnaryOpNode)
+		if e.Operator != a.Operator {
+			t.Fatalf("AST unary operator mismatch: expected %s, got %s", e.Operator, a.Operator)
+		}
+		assertASTNodeEqual(t, e.Operand, a.Operand)
 
 	default:
 		t.Fatalf("Unsupported AST node type: %T", expected)
@@ -342,6 +348,113 @@ func TestParsingInvalidInput(t *testing.T) {
 	if err == nil {
 		t.Fatalf("Expected parsing to fail for invalid input, but it succeeded")
 	}
+}
+
+func TestParsingUnaryInput(t *testing.T) {
+	program := "a = -x;"
+	parser := NewParser(program)
+	grammar := NewGrammar()
+	node, err := parser.Parse(grammar)
+	if err != nil {
+		t.Fatalf("Failed to parse program: %v", err)
+	}
+
+	expectedAST := &ASTProgramNode{
+		Block: ASTBlockNode{Stmts: []ASTNode{
+			&ASTAssignmentNode{
+				Id: ASTVariableNode{Token: Token{Type: Identifier, Lexeme: "a"}},
+				Expr: &ASTUnaryOpNode{
+					Operator: "-",
+					Operand:  &ASTVariableNode{Token: Token{Type: Identifier, Lexeme: "x"}},
+				},
+			},
+		}},
+	}
+
+	assertASTNodeEqual(t, expectedAST, node)
+}
+
+func TestParsingUnaryInputOnFunctionCall(t *testing.T) {
+	program := "a = -add(3, 4);"
+	parser := NewParser(program)
+	grammar := NewGrammar()
+	node, err := parser.Parse(grammar)
+	if err != nil {
+		t.Fatalf("Failed to parse program: %v", err)
+	}
+
+	expectedAST := &ASTProgramNode{
+		Block: ASTBlockNode{Stmts: []ASTNode{
+			&ASTAssignmentNode{
+				Id: ASTVariableNode{Token: Token{Type: Identifier, Lexeme: "a"}},
+				Expr: &ASTUnaryOpNode{
+					Operator: "-",
+					Operand: &ASTFuncCallNode{
+						Name: "add",
+						Params: &ASTActualParamsNode{
+							Params: []ASTNode{
+								&ASTIntegerNode{Value: 3},
+								&ASTIntegerNode{Value: 4},
+							},
+						},
+					},
+				},
+			},
+		}},
+	}
+
+	assertASTNodeEqual(t, expectedAST, node)
+}
+
+func TestParsingDoubleUnaryInput(t *testing.T) {
+	program := "a = --x;"
+	parser := NewParser(program)
+	grammar := NewGrammar()
+	node, err := parser.Parse(grammar)
+	if err != nil {
+		t.Fatalf("Failed to parse program: %v", err)
+	}
+
+	expectedAST := &ASTProgramNode{
+		Block: ASTBlockNode{Stmts: []ASTNode{
+			&ASTAssignmentNode{
+				Id: ASTVariableNode{Token: Token{Type: Identifier, Lexeme: "a"}},
+				Expr: &ASTUnaryOpNode{
+					Operator: "-",
+					Operand: &ASTUnaryOpNode{
+						Operator: "-",
+						Operand:  &ASTVariableNode{Token: Token{Type: Identifier, Lexeme: "x"}},
+					},
+				},
+			},
+		}},
+	}
+
+	assertASTNodeEqual(t, expectedAST, node)
+}
+
+func TestParsingNegativeInteger(t *testing.T) {
+	program := "a = -5;"
+	parser := NewParser(program)
+	grammar := NewGrammar()
+	node, err := parser.Parse(grammar)
+	if err != nil {
+		t.Fatalf("Failed to parse program: %v", err)
+	}
+
+	expectedAST := &ASTProgramNode{
+		Block: ASTBlockNode{Stmts: []ASTNode{
+			&ASTAssignmentNode{
+				Id: ASTVariableNode{Token: Token{Type: Identifier, Lexeme: "a"}},
+				Expr: &ASTUnaryOpNode{
+					Operator: "-",
+					Operand:  &ASTIntegerNode{Value: 5},
+				},
+			},
+		}},
+	}
+
+	assertASTNodeEqual(t, expectedAST, node)
 }
 
 func TestParsingEmptyProgram(t *testing.T) {
