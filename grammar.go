@@ -30,6 +30,16 @@ func NewGrammar() *Grammar {
 		},
 	})
 
+	// — Program → { StmtList }
+	g.Rules = append(g.Rules, Rule{
+		LHS: "Program",
+		RHS: []Symbol{LeftCurlyToken, "StmtList", RightCurlyToken},
+		Action: func(ch []ASTNode) ASTNode {
+			// ch[0] is *ASTBlockNode
+			blk := ch[1].(*ASTBlockNode)
+			return &ASTProgramNode{Block: *blk}
+		},
+	})
 	// — StmtList → Statement StmtList
 	g.Rules = append(g.Rules, Rule{
 		LHS: "StmtList",
@@ -724,6 +734,16 @@ func NewGrammar() *Grammar {
 			return &ASTActualParamsNode{
 				Params: []ASTNode{},
 			}
+		},
+	})
+
+	g.Rules = append(g.Rules, Rule{
+		LHS: "Statement",
+		RHS: []Symbol{"Block"},
+		Action: func(ch []ASTNode) ASTNode {
+			// ch[0] is *ASTBlockNode
+			blk := ch[0].(*ASTBlockNode)
+			return &ASTBlockNode{Name: "Statement", Stmts: blk.Stmts}
 		},
 	})
 

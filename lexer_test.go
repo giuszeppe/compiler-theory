@@ -27,17 +27,17 @@ func TestAllTokenTypes(t *testing.T) {
 
 		// Symbols
 		{"=", Token{Equals, "="}},
-		{";", Token{Semicolon, ";"}},
-		{"(", Token{LeftParen, "("}},
-		{")", Token{RightParen, ")"}},
-		{"+", Token{OperatorToken, "+"}},
-		{"-", Token{OperatorToken, "-"}},
-		{"*", Token{OperatorToken, "*"}},
-		{"/", Token{OperatorToken, "/"}},
-		{":", Token{Colon, ":"}},
-		{",", Token{Comma, ","}},
-		{"{", Token{LeftCurly, "{"}},
-		{"}", Token{RightCurly, "}"}},
+		{";", Token{SemicolonToken, ";"}},
+		{"(", Token{LeftParenToken, "("}},
+		{")", Token{RightParenToken, ")"}},
+		{"+", Token{PlusToken, "+"}},
+		{"-", Token{MinusToken, "-"}},
+		{"*", Token{StarToken, "*"}},
+		{"/", Token{SlashToken, "/"}},
+		{":", Token{ColonToken, ":"}},
+		{",", Token{CommaToken, ","}},
+		{"{", Token{LeftCurlyToken, "{"}},
+		{"}", Token{RightCurlyToken, "}"}},
 
 		// Relational Operators
 		{"<", Token{RelOp, "<"}},
@@ -48,7 +48,7 @@ func TestAllTokenTypes(t *testing.T) {
 		{"<=", Token{RelOp, "<="}},
 
 		// Arrow
-		{"->", Token{LeftArrow, "->"}},
+		{"->", Token{LeftArrowToken, "->"}},
 
 		// Keywords
 		{"let", Token{Let, "let"}},
@@ -61,7 +61,7 @@ func TestAllTokenTypes(t *testing.T) {
 		{"int", Token{IntType, "int"}},
 		{"float", Token{FloatType, "float"}},
 		{"bool", Token{BoolType, "bool"}},
-		{"colour", Token{ColourType, "colour"}},
+		{"color", Token{ColourType, "color"}},
 
 		{"//comment and dw", Token{CommentSingleLine, "//comment and dw"}},
 		{"/* comment and dw */", Token{CommentMultiLine, "/* comment and dw */"}},

@@ -2,10 +2,7 @@ package main
 
 func main() {
 	program := `
-	a = main(a,b);
-	let a:int = 2;
-	__print main(a);
-	__print main();
+	{ let x:int = 5; { let y:int = 10; } }
 	`
 
 	parser := NewParser(program)
