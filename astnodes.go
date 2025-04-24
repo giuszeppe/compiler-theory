@@ -27,6 +27,9 @@ type ASTVisitor interface {
 	VisitTypeNode(node *ASTTypeNode)
 	VisitFloatNode(node *ASTFloatNode)
 	VisitBuiltinFuncNode(node *ASTBuiltinFuncNode)
+	VisitFuncCallNode(node *ASTFuncCallNode)
+	VisitActualParamsNode(node *ASTActualParamsNode)
+	VisitActualParamNode(node *ASTActualParamNode)
 
 	IncTabCount()
 	DecTabCount()
@@ -244,4 +247,30 @@ type ASTBuiltinFuncNode struct {
 
 func (n *ASTBuiltinFuncNode) Accept(visitor ASTVisitor) {
 	visitor.VisitBuiltinFuncNode(n)
+}
+
+type ASTFuncCallNode struct {
+	Name   string
+	Params ASTNode
+}
+
+func (n *ASTFuncCallNode) Accept(visitor ASTVisitor) {
+	visitor.VisitFuncCallNode(n)
+}
+
+type ASTActualParamsNode struct {
+	Params []ASTNode
+}
+
+func (n *ASTActualParamsNode) Accept(visitor ASTVisitor) {
+	visitor.VisitActualParamsNode(n)
+}
+
+type ASTActualParamNode struct {
+	Value ASTNode
+	Type  string
+}
+
+func (n *ASTActualParamNode) Accept(visitor ASTVisitor) {
+	visitor.VisitActualParamNode(n)
 }

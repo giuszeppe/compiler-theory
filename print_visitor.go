@@ -213,3 +213,26 @@ func (v *PrintNodesVisitor) VisitBuiltinFuncNode(node *ASTBuiltinFuncNode) {
 	}
 	v.DecTabCount()
 }
+
+func (v *PrintNodesVisitor) VisitFuncCallNode(node *ASTFuncCallNode) {
+	v.NodeCount++
+	fmt.Println(strings.Repeat("\t", v.TabCount), "Function call node =>", node.Name)
+	v.IncTabCount()
+	node.Params.Accept(v)
+	v.DecTabCount()
+}
+func (v *PrintNodesVisitor) VisitActualParamsNode(node *ASTActualParamsNode) {
+	v.NodeCount++
+	fmt.Println(strings.Repeat("\t", v.TabCount), "Actual params node =>")
+	v.IncTabCount()
+	for _, param := range node.Params {
+		param.Accept(v)
+	}
+	v.DecTabCount()
+}
+func (v *PrintNodesVisitor) VisitActualParamNode(node *ASTActualParamNode) {
+	v.NodeCount++
+	fmt.Println(strings.Repeat("\t", v.TabCount), "Actual param node =>")
+	v.IncTabCount()
+	v.DecTabCount()
+}
