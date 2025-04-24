@@ -30,6 +30,10 @@ type ASTVisitor interface {
 	VisitFuncCallNode(node *ASTFuncCallNode)
 	VisitActualParamsNode(node *ASTActualParamsNode)
 	VisitActualParamNode(node *ASTActualParamNode)
+	VisitUnaryOpNode(node *ASTUnaryOpNode)
+	VisitBooleanNode(node *ASTBooleanNode)
+	VisitColorNode(node *ASTColorNode)
+	VisitReturnNode(node *ASTReturnNode)
 
 	IncTabCount()
 	DecTabCount()
@@ -283,4 +287,31 @@ type ASTUnaryOpNode struct {
 func (n *ASTUnaryOpNode) Accept(visitor ASTVisitor) {
 	// Implement the Accept method for ASTUnaryOpNode
 	fmt.Println("Visiting ASTUnaryOpNode")
+}
+
+type ASTBooleanNode struct {
+	Value bool
+}
+
+func (n *ASTBooleanNode) Accept(visitor ASTVisitor) {
+	// Implement the Accept method for ASTBooleanNode
+	visitor.VisitBooleanNode(n)
+}
+
+type ASTColorNode struct {
+	Value string
+}
+
+func (n *ASTColorNode) Accept(visitor ASTVisitor) {
+	// Implement the Accept method for ASTColorNode
+	visitor.VisitColorNode(n)
+}
+
+type ASTReturnNode struct {
+	Expr ASTNode
+}
+
+func (n *ASTReturnNode) Accept(visitor ASTVisitor) {
+	// Implement the Accept method for ASTReturnNode
+	visitor.VisitReturnNode(n)
 }

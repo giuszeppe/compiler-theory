@@ -126,6 +126,19 @@ func assertASTNodeEqual(t *testing.T, expected, actual ASTNode) {
 			t.Fatalf("AST unary operator mismatch: expected %s, got %s", e.Operator, a.Operator)
 		}
 		assertASTNodeEqual(t, e.Operand, a.Operand)
+	case *ASTBooleanNode:
+		a := actual.(*ASTBooleanNode)
+		if e.Value != a.Value {
+			t.Fatalf("AST boolean values are not equal: expected %v, got %v", e.Value, a.Value)
+		}
+	case *ASTReturnNode:
+		a := actual.(*ASTReturnNode)
+		assertASTNodeEqual(t, e.Expr, a.Expr)
+	case *ASTColorNode:
+		a := actual.(*ASTColorNode)
+		if e.Value != a.Value {
+			t.Fatalf("AST color values are not equal: expected %s, got %s", e.Value, a.Value)
+		}
 
 	default:
 		t.Fatalf("Unsupported AST node type: %T", expected)
@@ -541,6 +554,74 @@ func TestParsingUnaryOperators(t *testing.T) {
 					Operator: "not",
 					Operand:  &ASTVariableNode{Token: Token{Type: Identifier, Lexeme: "x"}},
 				},
+			},
+		}},
+	}
+
+	assertASTNodeEqual(t, expectedAST, node)
+}
+
+func TestParsingTrueFalse(t *testing.T) {
+	program := "a = true;b = false;"
+	parser := NewParser(program)
+	grammar := NewGrammar()
+	node, err := parser.Parse(grammar)
+	if err != nil {
+		t.Fatalf("Failed to parse program: %v", err)
+	}
+
+	expectedAST := &ASTProgramNode{
+		Block: ASTBlockNode{Stmts: []ASTNode{
+			&ASTAssignmentNode{
+				Id:   ASTVariableNode{Token: Token{Type: Identifier, Lexeme: "a"}},
+				Expr: &ASTBooleanNode{Value: true},
+			},
+			&ASTAssignmentNode{
+				Id:   ASTVariableNode{Token: Token{Type: Identifier, Lexeme: "b"}},
+				Expr: &ASTBooleanNode{Value: false},
+			},
+		}},
+	}
+
+	assertASTNodeEqual(t, expectedAST, node)
+}
+
+func TestParsingColor(t *testing.T) {
+	program := "a = #ffaabb;"
+	parser := NewParser(program)
+	grammar := NewGrammar()
+	node, err := parser.Parse(grammar)
+	if err != nil {
+		t.Fatalf("Failed to parse program: %v", err)
+	}
+
+	expectedAST := &ASTProgramNode{
+		Block: ASTBlockNode{Stmts: []ASTNode{
+			&ASTAssignmentNode{
+				Id: ASTVariableNode{Token: Token{Type: Identifier, Lexeme: "a"}},
+				Expr: &ASTColorNode{
+					Value: "#ffaabb",
+				},
+			},
+		}},
+	}
+
+	assertASTNodeEqual(t, expectedAST, node)
+}
+
+func TestReturnStatement(t *testing.T) {
+	program := "return x;"
+	parser := NewParser(program)
+	grammar := NewGrammar()
+	node, err := parser.Parse(grammar)
+	if err != nil {
+		t.Fatalf("Failed to parse program: %v", err)
+	}
+
+	expectedAST := &ASTProgramNode{
+		Block: ASTBlockNode{Stmts: []ASTNode{
+			&ASTReturnNode{
+				Expr: &ASTVariableNode{Token: Token{Type: Identifier, Lexeme: "x"}},
 			},
 		}},
 	}

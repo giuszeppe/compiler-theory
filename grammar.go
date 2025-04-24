@@ -848,6 +848,49 @@ func NewGrammar() *Grammar {
 		},
 	})
 
+	// - Factor -> 'true'
+	g.Rules = append(g.Rules, Rule{
+		LHS: "Factor",
+		RHS: []Symbol{True},
+		Action: func(ch []ASTNode) ASTNode {
+			return &ASTBooleanNode{
+				Value: true,
+			}
+		},
+	})
+	// - Factor -> 'false'
+	g.Rules = append(g.Rules, Rule{
+		LHS: "Factor",
+		RHS: []Symbol{False},
+		Action: func(ch []ASTNode) ASTNode {
+			return &ASTBooleanNode{
+				Value: false,
+			}
+		},
+	})
+
+	// - Factor -> HexNumber
+	g.Rules = append(g.Rules, Rule{
+		LHS: "Factor",
+		RHS: []Symbol{HexNumber},
+		Action: func(ch []ASTNode) ASTNode {
+			return &ASTColorNode{
+				Value: ch[0].(*ASTSimpleExpression).Token.Lexeme,
+			}
+		},
+	})
+
+	// - Statement -> 'return' Expr ';'
+	g.Rules = append(g.Rules, Rule{
+		LHS: "Statement",
+		RHS: []Symbol{Return, "Expr", SemicolonToken},
+		Action: func(ch []ASTNode) ASTNode {
+			return &ASTReturnNode{
+				Expr: ch[1],
+			}
+		},
+	})
+
 	// — finally, build the LL(1) table:
 	g.Table = genTable(g)
 	return g

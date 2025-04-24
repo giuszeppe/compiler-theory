@@ -236,3 +236,27 @@ func (v *PrintNodesVisitor) VisitActualParamNode(node *ASTActualParamNode) {
 	v.IncTabCount()
 	v.DecTabCount()
 }
+
+func (v *PrintNodesVisitor) VisitUnaryOpNode(node *ASTUnaryOpNode) {
+	v.NodeCount++
+	fmt.Println(strings.Repeat("\t", v.TabCount), "Unary Op node =>", node.Operator)
+	v.IncTabCount()
+	node.Operand.Accept(v)
+	v.DecTabCount()
+}
+func (v *PrintNodesVisitor) VisitReturnNode(node *ASTReturnNode) {
+	v.NodeCount++
+	fmt.Println(strings.Repeat("\t", v.TabCount), "Return node =>")
+	v.IncTabCount()
+	node.Expr.Accept(v)
+	v.DecTabCount()
+}
+func (v *PrintNodesVisitor) VisitColorNode(node *ASTColorNode) {
+	v.NodeCount++
+	fmt.Println(strings.Repeat("\t", v.TabCount), "Color node :: ", node.Value)
+}
+
+func (v *PrintNodesVisitor) VisitBooleanNode(node *ASTBooleanNode) {
+	v.NodeCount++
+	fmt.Println(strings.Repeat("\t", v.TabCount), "Boolean value::", node.Value)
+}
