@@ -32,6 +32,18 @@ func (t TokenType) String() string {
 		return "Return"
 	case PlusToken:
 		return "Plus"
+	case MinusToken:
+		return "Minus"
+	case SlashToken:
+		return "Slash"
+	case StarToken:
+		return "Star"
+	case AndToken:
+		return "And"
+	case OrToken:
+		return "Or"
+	case NotToken:
+		return "Not"
 	case Let:
 		return "Let"
 	case Error:
@@ -50,9 +62,9 @@ func (t TokenType) String() string {
 		return "ColourType"
 	case FloatType:
 		return "FloatType"
-	case LeftCurly:
+	case LeftCurlyToken:
 		return "LeftCurly"
-	case RightCurly:
+	case RightCurlyToken:
 		return "RightCurly"
 	case RelOpToken:
 		return "RelOp"
@@ -107,6 +119,9 @@ const (
 	StarToken
 	MinusToken
 	SlashToken
+	AndToken
+	OrToken
+	NotToken
 	// Syntax
 	SemicolonToken
 	LeftParenToken
@@ -468,6 +483,12 @@ func getKeywordTokenByLexeme(lexeme string) (Token, bool) {
 		return Token{PadRead, lexeme}, true
 	case "__random_int":
 		return Token{PadRandI, lexeme}, true
+	case "and":
+		return Token{AndToken, lexeme}, true
+	case "or":
+		return Token{OrToken, lexeme}, true
+	case "not":
+		return Token{NotToken, lexeme}, true
 	default:
 		return Token{}, false
 	}
@@ -501,7 +522,7 @@ func (l *Lexer) getTokenTypeByFinalState(state int, lexeme string) Token {
 
 	case StateRelOpExtended:
 		if lexeme == "->" {
-			return Token{LeftArrow, lexeme}
+			return Token{LeftArrowToken, lexeme}
 		}
 	}
 

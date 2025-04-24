@@ -30,22 +30,27 @@ func TestAllTokenTypes(t *testing.T) {
 		{";", Token{SemicolonToken, ";"}},
 		{"(", Token{LeftParenToken, "("}},
 		{")", Token{RightParenToken, ")"}},
+		// Operators
 		{"+", Token{PlusToken, "+"}},
 		{"-", Token{MinusToken, "-"}},
 		{"*", Token{StarToken, "*"}},
 		{"/", Token{SlashToken, "/"}},
+		{"and", Token{AndToken, "and"}},
+		{"or", Token{OrToken, "or"}},
+		{"not", Token{NotToken, "not"}},
+
 		{":", Token{ColonToken, ":"}},
 		{",", Token{CommaToken, ","}},
 		{"{", Token{LeftCurlyToken, "{"}},
 		{"}", Token{RightCurlyToken, "}"}},
 
 		// Relational Operators
-		{"<", Token{RelOp, "<"}},
-		{">", Token{RelOp, ">"}},
-		{"!=", Token{RelOp, "!="}},
-		{"==", Token{RelOp, "=="}},
-		{">=", Token{RelOp, ">="}},
-		{"<=", Token{RelOp, "<="}},
+		{"<", Token{RelOpToken, "<"}},
+		{">", Token{RelOpToken, ">"}},
+		{"!=", Token{RelOpToken, "!="}},
+		{"==", Token{RelOpToken, "=="}},
+		{">=", Token{RelOpToken, ">="}},
+		{"<=", Token{RelOpToken, "<="}},
 
 		// Arrow
 		{"->", Token{LeftArrowToken, "->"}},

@@ -457,6 +457,97 @@ func TestParsingNegativeInteger(t *testing.T) {
 	assertASTNodeEqual(t, expectedAST, node)
 }
 
+func TestParsingMultiplicativeOperators(t *testing.T) {
+	program := "a = 3 * 4 / 2 and 5;"
+	parser := NewParser(program)
+	grammar := NewGrammar()
+	node, err := parser.Parse(grammar)
+	if err != nil {
+		t.Fatalf("Failed to parse program: %v", err)
+	}
+
+	expectedAST := &ASTProgramNode{
+		Block: ASTBlockNode{Stmts: []ASTNode{
+			&ASTAssignmentNode{
+				Id: ASTVariableNode{Token: Token{Type: Identifier, Lexeme: "a"}},
+				Expr: &ASTBinaryOpNode{
+					Left: &ASTBinaryOpNode{
+						Left: &ASTBinaryOpNode{
+							Left:     &ASTIntegerNode{Value: 3},
+							Operator: "*",
+							Right:    &ASTIntegerNode{Value: 4},
+						},
+						Operator: "/",
+						Right:    &ASTIntegerNode{Value: 2},
+					},
+					Operator: "and",
+					Right:    &ASTIntegerNode{Value: 5},
+				},
+			},
+		}},
+	}
+
+	assertASTNodeEqual(t, expectedAST, node)
+}
+
+func TestParsingAdditiveOperators(t *testing.T) {
+	program := "a = 3 + 4 - 2 or 5;"
+	parser := NewParser(program)
+	grammar := NewGrammar()
+	node, err := parser.Parse(grammar)
+	if err != nil {
+		t.Fatalf("Failed to parse program: %v", err)
+	}
+
+	expectedAST := &ASTProgramNode{
+		Block: ASTBlockNode{Stmts: []ASTNode{
+			&ASTAssignmentNode{
+				Id: ASTVariableNode{Token: Token{Type: Identifier, Lexeme: "a"}},
+				Expr: &ASTBinaryOpNode{
+
+					Left: &ASTBinaryOpNode{
+						Left: &ASTBinaryOpNode{
+							Left:     &ASTIntegerNode{Value: 3},
+							Operator: "+",
+							Right:    &ASTIntegerNode{Value: 4},
+						},
+						Operator: "-",
+						Right:    &ASTIntegerNode{Value: 2},
+					},
+					Operator: "or",
+					Right:    &ASTIntegerNode{Value: 5},
+				},
+			},
+		}},
+	}
+
+	assertASTNodeEqual(t, expectedAST, node)
+}
+
+func TestParsingUnaryOperators(t *testing.T) {
+	program := "a = not x;"
+	parser := NewParser(program)
+	grammar := NewGrammar()
+	node, err := parser.Parse(grammar)
+	if err != nil {
+		t.Fatalf("Failed to parse program: %v", err)
+	}
+
+	expectedAST := &ASTProgramNode{
+		Block: ASTBlockNode{Stmts: []ASTNode{
+			&ASTAssignmentNode{
+				Id: ASTVariableNode{Token: Token{Type: Identifier, Lexeme: "a"}},
+				Expr: &ASTUnaryOpNode{
+					Operator: "not",
+					Operand:  &ASTVariableNode{Token: Token{Type: Identifier, Lexeme: "x"}},
+				},
+			},
+		}},
+	}
+
+	assertASTNodeEqual(t, expectedAST, node)
+}
+
 func TestParsingEmptyProgram(t *testing.T) {
 	program := ""
 	parser := NewParser(program)

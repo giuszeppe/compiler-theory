@@ -240,7 +240,7 @@ func NewGrammar() *Grammar {
 	// — SimpleExprPrime → '+' Term SimpleExprPrime
 	g.Rules = append(g.Rules, Rule{
 		LHS: "SimpleExprPrime",
-		RHS: []Symbol{PlusToken, "Term", "SimpleExprPrime"},
+		RHS: []Symbol{"AdditiveOperator", "Term", "SimpleExprPrime"},
 		Action: func(ch []ASTNode) ASTNode {
 			op := ch[0].(*ASTSimpleExpression).Token.Lexeme
 			term := ch[1]
@@ -294,10 +294,10 @@ func NewGrammar() *Grammar {
 		},
 	})
 
-	// — TermPrime → '*' Factor TermPrime
+	// — TermPrime → MultiplicativeOperator Factor TermPrime
 	g.Rules = append(g.Rules, Rule{
 		LHS: "TermPrime",
-		RHS: []Symbol{StarToken, "Factor", "TermPrime"},
+		RHS: []Symbol{"MultiplicativeOperator", "Factor", "TermPrime"},
 		Action: func(ch []ASTNode) ASTNode {
 			op := ch[0].(*ASTSimpleExpression).Token.Lexeme
 			term := ch[1]
@@ -311,6 +311,64 @@ func NewGrammar() *Grammar {
 
 			return &ASTExpressionNode{
 				Expr: &ASTOpList{Pairs: pairs},
+			}
+		},
+	})
+
+	// - MultiplicativeOperator → '*' | '/' | 'and'
+	g.Rules = append(g.Rules, Rule{
+		LHS: "MultiplicativeOperator",
+		RHS: []Symbol{StarToken},
+		Action: func(ch []ASTNode) ASTNode {
+			return &ASTSimpleExpression{
+				Token: ch[0].(*ASTSimpleExpression).Token,
+			}
+		},
+	})
+	g.Rules = append(g.Rules, Rule{
+		LHS: "MultiplicativeOperator",
+		RHS: []Symbol{SlashToken},
+		Action: func(ch []ASTNode) ASTNode {
+			return &ASTSimpleExpression{
+				Token: ch[0].(*ASTSimpleExpression).Token,
+			}
+		},
+	})
+	g.Rules = append(g.Rules, Rule{
+		LHS: "MultiplicativeOperator",
+		RHS: []Symbol{AndToken},
+		Action: func(ch []ASTNode) ASTNode {
+			return &ASTSimpleExpression{
+				Token: ch[0].(*ASTSimpleExpression).Token,
+			}
+		},
+	})
+
+	// — AdditiveOperator → '+' | '-' | 'or'
+	g.Rules = append(g.Rules, Rule{
+		LHS: "AdditiveOperator",
+		RHS: []Symbol{PlusToken},
+		Action: func(ch []ASTNode) ASTNode {
+			return &ASTSimpleExpression{
+				Token: ch[0].(*ASTSimpleExpression).Token,
+			}
+		},
+	})
+	g.Rules = append(g.Rules, Rule{
+		LHS: "AdditiveOperator",
+		RHS: []Symbol{MinusToken},
+		Action: func(ch []ASTNode) ASTNode {
+			return &ASTSimpleExpression{
+				Token: ch[0].(*ASTSimpleExpression).Token,
+			}
+		},
+	})
+	g.Rules = append(g.Rules, Rule{
+		LHS: "AdditiveOperator",
+		RHS: []Symbol{OrToken},
+		Action: func(ch []ASTNode) ASTNode {
+			return &ASTSimpleExpression{
+				Token: ch[0].(*ASTSimpleExpression).Token,
 			}
 		},
 	})
@@ -760,11 +818,32 @@ func NewGrammar() *Grammar {
 	// - Unary -> '-' Factor
 	g.Rules = append(g.Rules, Rule{
 		LHS: "Unary",
-		RHS: []Symbol{MinusToken, "Factor"},
+		RHS: []Symbol{"UnaryOperator", "Factor"},
 		Action: func(ch []ASTNode) ASTNode {
 			return &ASTUnaryOpNode{
 				Operator: ch[0].(*ASTSimpleExpression).Token.Lexeme,
 				Operand:  ch[1],
+			}
+		},
+	})
+
+	// - UnaryOperator -> '-' | 'not'
+	g.Rules = append(g.Rules, Rule{
+		LHS: "UnaryOperator",
+		RHS: []Symbol{MinusToken},
+		Action: func(ch []ASTNode) ASTNode {
+			return &ASTSimpleExpression{
+				Token: ch[0].(*ASTSimpleExpression).Token,
+			}
+		},
+	})
+	// - UnaryOperator -> '-' | 'not'
+	g.Rules = append(g.Rules, Rule{
+		LHS: "UnaryOperator",
+		RHS: []Symbol{NotToken},
+		Action: func(ch []ASTNode) ASTNode {
+			return &ASTSimpleExpression{
+				Token: ch[0].(*ASTSimpleExpression).Token,
 			}
 		},
 	})
