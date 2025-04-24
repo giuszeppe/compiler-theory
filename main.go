@@ -6,20 +6,28 @@ import (
 )
 
 func main() {
-	program := `fun main(x:int, y:float) -> int {
-		let a:int = 2;
-		let c:color = a + b;
-		let d:bool = a == b;
-		let e:float = 2.5;
+	// program := `fun main(x:int, y:float) -> int {
+	// 	let a:int = 2;
+	// 	let c:color = a + b;
+	// 	let d:bool = a == b;
+	// 	let e:float = 2.5;
 
-		if (a == b) {
-			c = a + b;
-		} else {
-		 	for (let i:int = 0; i < 10; i = i + 1) {
-				c = a + b;
-			}
-		}
-	}`
+	// 	if (a == b) {
+	// 		c = 3;
+	// 	} else {
+	// 	 	for (let i:int = 0; i < 10; i = i + 1) {
+	// 			c = a + b;
+	// 		}
+	// 	}
+	// }`
+	program := `x = 3 + 5;
+	`
+	// program := `
+	// __print __height;
+	// __print __width;
+	// // __read __width, __height;
+
+	// `
 	parser := NewParser(program)
 	printVisitor := PrintNodesVisitor{}
 	grammar := NewGrammar()
@@ -588,10 +596,109 @@ func NewGrammar() *Grammar {
 		},
 	})
 
-	// … you can keep adding rules for
-	//      Assignment, PrintStatement, VarDecl, If, While, For, etc.
-	// in exactly the same pattern: LHS, then RHS slice mixing TokenType & string,
-	// then an Action that builds one of your AST*Node structs.
+	// - Statement → __print Expr ';'
+	g.Rules = append(g.Rules, Rule{
+		LHS: "Statement",
+		RHS: []Symbol{Print, "Expr", SemicolonToken},
+		Action: func(ch []ASTNode) ASTNode {
+			return &ASTBuiltinFuncNode{
+				Name: ch[0].(*ASTSimpleExpression).Token.Lexeme,
+				Args: []ASTNode{ch[1]},
+			}
+		},
+	})
+
+	// - Statement → __delay Expr ';'
+	g.Rules = append(g.Rules, Rule{
+		LHS: "Statement",
+		RHS: []Symbol{Delay, "Expr", SemicolonToken},
+		Action: func(ch []ASTNode) ASTNode {
+			return &ASTBuiltinFuncNode{
+				Name: ch[0].(*ASTSimpleExpression).Token.Lexeme,
+				Args: []ASTNode{ch[1]},
+			}
+		},
+	})
+
+	// - Statement → __write Expr ',' Expr ',' Expr ';'
+	g.Rules = append(g.Rules, Rule{
+		LHS: "Statement",
+		RHS: []Symbol{Write, "Expr", CommaToken, "Expr", CommaToken, "Expr", SemicolonToken},
+		Action: func(ch []ASTNode) ASTNode {
+			return &ASTBuiltinFuncNode{
+				Name: ch[0].(*ASTSimpleExpression).Token.Lexeme,
+				Args: []ASTNode{ch[1], ch[3], ch[5]},
+			}
+		},
+	})
+
+	// - Statement → __write_box Expr ',' Expr ',' Expr ',' Expr ',' Expr ';'
+	g.Rules = append(g.Rules, Rule{
+		LHS: "Statement",
+		RHS: []Symbol{WriteBox, "Expr", CommaToken, "Expr", CommaToken, "Expr", CommaToken, "Expr", CommaToken, "Expr", SemicolonToken},
+		Action: func(ch []ASTNode) ASTNode {
+			return &ASTBuiltinFuncNode{
+				Name: ch[0].(*ASTSimpleExpression).Token.Lexeme,
+				Args: []ASTNode{ch[1], ch[3], ch[5], ch[7], ch[9]},
+			}
+		},
+	})
+
+	// - Factor → __width
+	g.Rules = append(g.Rules, Rule{
+		LHS: "Factor",
+		RHS: []Symbol{PadWidth},
+		Action: func(ch []ASTNode) ASTNode {
+			return &ASTBuiltinFuncNode{
+				Name: ch[0].(*ASTSimpleExpression).Token.Lexeme,
+				Args: []ASTNode{},
+			}
+		},
+	})
+
+	// - Factor → __height
+	g.Rules = append(g.Rules, Rule{
+		LHS: "Factor",
+		RHS: []Symbol{PadHeight},
+		Action: func(ch []ASTNode) ASTNode {
+			return &ASTBuiltinFuncNode{
+				Name: ch[0].(*ASTSimpleExpression).Token.Lexeme,
+				Args: []ASTNode{},
+			}
+		},
+	})
+
+	// - Factor → __read Expr ',' Expr
+	g.Rules = append(g.Rules, Rule{
+		LHS: "Factor",
+		RHS: []Symbol{"ReadExpr"},
+		Action: func(ch []ASTNode) ASTNode {
+			return ch[0]
+		},
+	})
+
+	g.Rules = append(g.Rules, Rule{
+		LHS: "ReadExpr",
+		RHS: []Symbol{PadRead, LeftParenToken, "Expr", CommaToken, "Expr", RightParenToken},
+		Action: func(ch []ASTNode) ASTNode {
+			return &ASTBuiltinFuncNode{
+				Name: "__read",
+				Args: []ASTNode{ch[1], ch[3]},
+			}
+		},
+	})
+
+	//	- Factor → __random_int Expr
+	g.Rules = append(g.Rules, Rule{
+		LHS: "Factor",
+		RHS: []Symbol{PadRandI, LeftParenToken, "Expr", RightParenToken},
+		Action: func(ch []ASTNode) ASTNode {
+			return &ASTBuiltinFuncNode{
+				Name: ch[0].(*ASTSimpleExpression).Token.Lexeme,
+				Args: []ASTNode{ch[1]},
+			}
+		},
+	})
 
 	// — finally, build the LL(1) table:
 	g.Table = genTable(g)

@@ -203,3 +203,13 @@ func (v *PrintNodesVisitor) VisitFloatNode(node *ASTFloatNode) {
 	v.NodeCount++
 	fmt.Println(strings.Repeat("\t", v.TabCount), "Float value::", node.Value)
 }
+
+func (v *PrintNodesVisitor) VisitBuiltinFuncNode(node *ASTBuiltinFuncNode) {
+	v.NodeCount++
+	fmt.Println(strings.Repeat("\t", v.TabCount), "Builtin function node =>", node.Name)
+	v.IncTabCount()
+	for _, arg := range node.Args {
+		arg.Accept(v)
+	}
+	v.DecTabCount()
+}

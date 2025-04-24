@@ -76,6 +76,22 @@ func (t TokenType) String() string {
 		return "For"
 	case Fun:
 		return "Fun"
+	case Print:
+		return "Print"
+	case Delay:
+		return "Delay"
+	case WriteBox:
+		return "WriteBox"
+	case Write:
+		return "Write"
+	case PadWidth:
+		return "PadWidth"
+	case PadHeight:
+		return "PadHeight"
+	case PadRead:
+		return "PadRead"
+	case PadRandI:
+		return "PadRandI"
 	default:
 		return "Unknown"
 	}
@@ -123,6 +139,17 @@ const (
 	While
 	For
 	Fun
+
+	// Builtins
+	PadWidth
+	PadHeight
+	PadRead
+	PadRandI
+
+	Print
+	Delay
+	WriteBox
+	Write
 
 	// Type
 	IntType
@@ -425,6 +452,22 @@ func getKeywordTokenByLexeme(lexeme string) (Token, bool) {
 		return Token{For, lexeme}, true
 	case "fun":
 		return Token{Fun, lexeme}, true
+	case "__print":
+		return Token{Print, lexeme}, true
+	case "__delay":
+		return Token{Delay, lexeme}, true
+	case "__write":
+		return Token{Write, lexeme}, true
+	case "__write_box":
+		return Token{WriteBox, lexeme}, true
+	case "__width":
+		return Token{PadWidth, lexeme}, true
+	case "__height":
+		return Token{PadHeight, lexeme}, true
+	case "__read":
+		return Token{PadRead, lexeme}, true
+	case "__random_int":
+		return Token{PadRandI, lexeme}, true
 	default:
 		return Token{}, false
 	}
