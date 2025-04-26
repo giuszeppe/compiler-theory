@@ -39,11 +39,11 @@ __write_box u,v,1,1,#00ff00;
 	`
 
 	parser := NewParser(program)
-	printVisitor := PrintNodesVisitor{}
+	printVisitor := NewSemanticVisitor()
 	grammar := NewGrammar()
 	node, err := parser.Parse(grammar)
 	if err != nil {
 		panic(err)
 	}
-	node.Accept(&printVisitor)
+	node.Accept(printVisitor)
 }

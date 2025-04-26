@@ -34,9 +34,6 @@ type ASTVisitor interface {
 	VisitBooleanNode(node *ASTBooleanNode)
 	VisitColorNode(node *ASTColorNode)
 	VisitReturnNode(node *ASTReturnNode)
-
-	IncTabCount()
-	DecTabCount()
 }
 
 // ==== AST Node Interface ====
