@@ -558,9 +558,10 @@ func NewGrammar() *Grammar {
 		LHS: "FormalParams",
 		RHS: []Symbol{Identifier, ColonToken, "TypeRule", "FormalParamsTail"},
 		Action: func(ch []ASTNode) ASTNode {
-			param := ASTFormalParamNode{
-				Name: ch[0].(*ASTSimpleExpression).Token.Lexeme,
-				Type: ch[2].(*ASTTypeNode).Name,
+			param := ASTVarDeclNode{
+				Name:       ch[0].(*ASTSimpleExpression).Token.Lexeme,
+				Type:       ch[2].(*ASTTypeNode).Name,
+				Expression: &ASTExpressionNode{Expr: &ASTEpsilon{}},
 			}
 			tail := ch[3].(*ASTFormalParamsNode)
 
@@ -575,9 +576,10 @@ func NewGrammar() *Grammar {
 		LHS: "FormalParamsTail",
 		RHS: []Symbol{CommaToken, Identifier, ColonToken, "TypeRule", "FormalParamsTail"},
 		Action: func(ch []ASTNode) ASTNode {
-			param := ASTFormalParamNode{
-				Name: ch[1].(*ASTSimpleExpression).Token.Lexeme,
-				Type: ch[3].(*ASTTypeNode).Name,
+			param := ASTVarDeclNode{
+				Name:       ch[1].(*ASTSimpleExpression).Token.Lexeme,
+				Type:       ch[3].(*ASTTypeNode).Name,
+				Expression: &ASTExpressionNode{Expr: &ASTEpsilon{}},
 			}
 			tail := ch[4].(*ASTFormalParamsNode)
 

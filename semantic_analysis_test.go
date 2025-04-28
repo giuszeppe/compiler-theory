@@ -16,7 +16,7 @@ func expectPanic(t *testing.T, f func(), msg string) {
 }
 
 func TestDoubleVariableDeclaration(t *testing.T) {
-	program := `let x:int = 5; let x:float = 10;
+	program := `let x:int = 5; let x:float = 10.0;
 	`
 	parser := NewParser(program)
 	grammar := NewGrammar()
@@ -188,4 +188,88 @@ func TestInvalidBlock(t *testing.T) {
 	visitor := NewSemanticVisitor()
 
 	expectPanic(t, func() { rootAST.Accept(visitor) }, "Variable not declared: y")
+}
+
+func TestTypeMismatchOnVariableDeclaration(t *testing.T) {
+	program := `let x:int = 5.0;
+	`
+	parser := NewParser(program)
+	grammar := NewGrammar()
+	rootAST, err := parser.Parse(grammar)
+	if err != nil {
+		t.Fatalf("Failed to parse program: %v", err)
+	}
+	visitor := NewSemanticVisitor()
+
+	expectPanic(t, func() { rootAST.Accept(visitor) }, "Type mismatch: expected int, got float")
+}
+
+func TestTypeMismatchOnAssignment(t *testing.T) {
+	program := `let x:int = 5; x = 10.0;
+	`
+	parser := NewParser(program)
+	grammar := NewGrammar()
+	rootAST, err := parser.Parse(grammar)
+	if err != nil {
+		t.Fatalf("Failed to parse program: %v", err)
+	}
+	visitor := NewSemanticVisitor()
+
+	expectPanic(t, func() { rootAST.Accept(visitor) }, "Type mismatch: expected int, got float")
+}
+
+func TestTypeMismatchOnFormalAndActualParams(t *testing.T) {
+	program := `fun foo(x:int) -> int { return x; } let y:float = foo(5.0);
+	`
+	parser := NewParser(program)
+	grammar := NewGrammar()
+	rootAST, err := parser.Parse(grammar)
+	if err != nil {
+		t.Fatalf("Failed to parse program: %v", err)
+	}
+	visitor := NewSemanticVisitor()
+
+	expectPanic(t, func() { rootAST.Accept(visitor) }, "Type mismatch: expected int, got float")
+}
+
+func TestArgumentNumberMismatch(t *testing.T) {
+	program := `fun foo(x:int, y:int) -> int { return x + y; } let z:int = foo(5);
+	`
+	parser := NewParser(program)
+	grammar := NewGrammar()
+	rootAST, err := parser.Parse(grammar)
+	if err != nil {
+		t.Fatalf("Failed to parse program: %v", err)
+	}
+	visitor := NewSemanticVisitor()
+
+	expectPanic(t, func() { rootAST.Accept(visitor) }, "Argument count mismatch: expected 2, got 1")
+}
+
+func TestReturnTypeMismatch(t *testing.T) {
+	program := `fun foo() -> int { return 5.0; }
+	`
+	parser := NewParser(program)
+	grammar := NewGrammar()
+	rootAST, err := parser.Parse(grammar)
+	if err != nil {
+		t.Fatalf("Failed to parse program: %v", err)
+	}
+	visitor := NewSemanticVisitor()
+
+	expectPanic(t, func() { rootAST.Accept(visitor) }, "Return type mismatch: expected int, got float")
+}
+
+func TestFunctionUsedAsOperandMismatchType(t *testing.T) {
+	program := `fun foo() -> int { return 5; } let x:int = foo() + 10.0;
+	`
+	parser := NewParser(program)
+	grammar := NewGrammar()
+	rootAST, err := parser.Parse(grammar)
+	if err != nil {
+		t.Fatalf("Failed to parse program: %v", err)
+	}
+	visitor := NewSemanticVisitor()
+
+	expectPanic(t, func() { rootAST.Accept(visitor) }, "Type mismatch: expected int, got float")
 }

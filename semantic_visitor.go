@@ -1,5 +1,7 @@
 package main
 
+import "fmt"
+
 type Scope map[string]ASTNode
 
 type SymbolTable struct {
@@ -68,12 +70,99 @@ func (v *SemanticVisitor) VisitVariableNode(node *ASTVariableNode) {
 
 }
 
+func getExpressionType(node ASTNode, symbolTable SymbolTable) string {
+	switch n := node.(type) {
+	case *ASTIntegerNode:
+		return "int"
+	case *ASTFloatNode:
+		return "float"
+	case *ASTBooleanNode:
+		return "bool"
+	case *ASTColorNode:
+		return "color"
+	case *ASTVariableNode:
+		variableNode, ok := node.(*ASTVariableNode)
+		if !ok {
+			panic("Not a variable node: ")
+		}
+		// Check if the variable is declared
+		val, ok := symbolTable.Lookup(variableNode.Token.Lexeme)
+		if !ok {
+			panic("Variable not declared: " + variableNode.Token.Lexeme)
+		}
+		varDeclNode, ok := val.(*ASTVarDeclNode)
+		if !ok {
+			panic("Not a variable declaration: ")
+		}
+		return varDeclNode.Type
+
+	case *ASTBinaryOpNode:
+		leftType := getExpressionType(n.Left, symbolTable)
+		rightType := getExpressionType(n.Right, symbolTable)
+		if leftType != rightType {
+			panic("Type mismatch: expected " + leftType + ", got " + rightType)
+		}
+		return leftType
+	case *ASTUnaryOpNode:
+		return getExpressionType(n.Operand, symbolTable)
+	case *ASTAssignmentNode:
+		return getExpressionType(n.Expr, symbolTable)
+	case *ASTFuncCallNode:
+		// Check if the function is declared
+		val, ok := symbolTable.Lookup(n.Name)
+		if !ok {
+			panic("Function not declared: " + n.Name)
+		}
+		funcDeclNode, ok := val.(*ASTFuncDeclNode)
+		if !ok {
+			panic("Not a function declaration: " + n.Name)
+		}
+		formalParamsNode, _ := funcDeclNode.Params.(*ASTFormalParamsNode)
+		// Check if the types of the arguments match
+		actualParamsNode, _ := n.Params.(*ASTActualParamsNode)
+
+		// Check if the number of arguments matches
+		if len(actualParamsNode.Params) != len(formalParamsNode.Params) {
+			panic("Argument count mismatch: expected " + fmt.Sprint(len(formalParamsNode.Params)) + ", got " + fmt.Sprint(len(actualParamsNode.Params)))
+		}
+		for i, param := range actualParamsNode.Params {
+			paramType := getExpressionType(param, symbolTable)
+			formParamNode := formalParamsNode.Params[i].(*ASTVarDeclNode)
+			funcParamType := formParamNode.Type
+
+			if paramType != funcParamType {
+				panic("Type mismatch: expected " + funcParamType + ", got " + paramType)
+			}
+		}
+		return funcDeclNode.ReturnType
+	case *ASTReturnNode:
+		return getExpressionType(n.Expr, symbolTable)
+	case *ASTExpressionNode:
+		return getExpressionType(n.Expr, symbolTable)
+	case *ASTEpsilon:
+		return ""
+
+	default:
+		panic("Unknown expression type" + fmt.Sprintf("%T", node))
+	}
+}
+
 func (v *SemanticVisitor) VisitAssignmentNode(node *ASTAssignmentNode) {
 	// Check if the variable is declared
-	_, ok := v.SymbolTable.Lookup(node.Id.Token.Lexeme)
+	val, ok := v.SymbolTable.Lookup(node.Id.Token.Lexeme)
 	if !ok {
 		panic("Variable not declared: " + node.Id.Token.Lexeme)
 	}
+
+	varDeclNode, ok := val.(*ASTVarDeclNode)
+	if !ok {
+		panic("Not a variable declaration: " + node.Id.Token.Lexeme)
+	}
+	// Check if the type of the expression matches the variable type
+	if getExpressionType(node.Expr, *v.SymbolTable) != varDeclNode.Type {
+		panic(fmt.Sprintf("Type mismatch: expected %v, got %v", varDeclNode.Type, getExpressionType(node.Expr, *v.SymbolTable)))
+	}
+
 	node.Expr.Accept(v)
 }
 
@@ -82,56 +171,71 @@ func (v *SemanticVisitor) VisitVarDeclNode(node *ASTVarDeclNode) {
 	if _, ok := v.SymbolTable.Lookup(node.Name); ok {
 		panic("Variable already declared: " + node.Name)
 	}
+
+	nodeType := getExpressionType(node.Expression, *v.SymbolTable)
+	// Check if the type is valid
+	if nodeType != "" && nodeType != node.Type {
+		panic(fmt.Sprintf("Type mismatch: expected %v, got %v", node.Type, getExpressionType(node.Expression, *v.SymbolTable)))
+	}
+
 	v.SymbolTable.Insert(node.Name, node)
 	node.Expression.Accept(v)
 }
 func (v *SemanticVisitor) VisitBlockNode(node *ASTBlockNode) {
-	v.SymbolTable.Push()
 	for _, stmt := range node.Stmts {
+		if _, ok := stmt.(*ASTBlockNode); ok {
+			v.SymbolTable.Push()
+		}
 		stmt.Accept(v)
+		if _, ok := stmt.(*ASTBlockNode); ok {
+			v.SymbolTable.Pop()
+		}
 	}
-	v.SymbolTable.Pop()
 }
 func (v *SemanticVisitor) VisitTypeNode(node *ASTTypeNode) {
 	// Do nothing
 }
 func (v *SemanticVisitor) VisitFunctionNode(node *ASTFuncDeclNode) {
 	// Check if the function is already declared in the current scope
-	if _, ok := v.SymbolTable.Lookup(node.Name); ok {
-		panic("Function already declared: " + node.Name)
-	}
-	v.SymbolTable.Insert(node.Name, node)
-	v.SymbolTable.Push()
-	node.Params.Accept(v)
-	node.Block.Accept(v)
-	v.SymbolTable.Pop()
 }
 
 func (v *SemanticVisitor) VisitProgramNode(node *ASTProgramNode) {
 	// Visit the block node
+	v.SymbolTable.Push()
 	node.Block.Accept(v)
+	v.SymbolTable.Pop()
 }
 func (v *SemanticVisitor) VisitIfNode(node *ASTIfNode) {
 	// Visit the condition and the block
 	node.Condition.Accept(v)
+	v.SymbolTable.Push()
 	node.ThenBlock.Accept(v)
+	v.SymbolTable.Pop()
 	if node.ElseBlock != nil {
+		v.SymbolTable.Push()
 		node.ElseBlock.Accept(v)
+		v.SymbolTable.Pop()
+
 	}
 }
 
 func (v *SemanticVisitor) VisitWhileNode(node *ASTWhileNode) {
 	// Visit the condition and the block
 	node.Condition.Accept(v)
+	v.SymbolTable.Push()
 	node.Block.Accept(v)
+	v.SymbolTable.Pop()
 }
 
 func (v *SemanticVisitor) VisitForNode(node *ASTForNode) {
 	// Visit the initialization, condition, and block
+	v.SymbolTable.Push()
 	node.VarDecl.Accept(v)
 	node.Condition.Accept(v)
 	node.Increment.Accept(v)
 	node.Block.Accept(v)
+	v.SymbolTable.Pop()
+
 }
 
 func (v *SemanticVisitor) VisitTypeCastNode(node *ASTTypeCastNode) {
@@ -218,14 +322,29 @@ func (v *SemanticVisitor) VisitFormalParamNode(node *ASTFormalParamNode) {
 }
 
 func (v *SemanticVisitor) VisitFuncDeclNode(node *ASTFuncDeclNode) {
-	// Check if the function is already declared in the current scope
 	if _, ok := v.SymbolTable.Lookup(node.Name); ok {
 		panic("Function already declared: " + node.Name)
 	}
+
 	v.SymbolTable.Insert(node.Name, node)
 	v.SymbolTable.Push()
 	node.Params.Accept(v)
 	node.Block.Accept(v)
+	// Check if the return type is valid
+	funcBlock, _ := node.Block.(*ASTBlockNode)
+	hasReturn := false
+	for _, stmt := range funcBlock.Stmts {
+		if ret, ok := stmt.(*ASTReturnNode); ok {
+			hasReturn = true
+			// Check if the return type matches the function return type
+			if getExpressionType(ret.Expr, *v.SymbolTable) != node.ReturnType {
+				panic(fmt.Sprintf("Return type mismatch: expected %v, got %v", node.ReturnType, getExpressionType(ret, *v.SymbolTable)))
+			}
+		}
+	}
+	if !hasReturn {
+		panic("Function must have a return statement")
+	}
 	v.SymbolTable.Pop()
 }
 
