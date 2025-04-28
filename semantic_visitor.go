@@ -283,6 +283,14 @@ func (v *SemanticVisitor) VisitBooleanNode(node *ASTBooleanNode) {
 	// Do nothing
 }
 func (v *SemanticVisitor) VisitColorNode(node *ASTColorNode) {
+	hexValue := node.Value
+	if (len(hexValue) != 7 && len(hexValue) != 4) || hexValue[0] != '#' {
+		panic("Invalid color value: " + hexValue)
+	}
+	// Check if the color value is valid
+	if _, err := fmt.Sscanf(hexValue, "#%x", new(int)); err != nil {
+		panic("Invalid color value: " + hexValue)
+	}
 	// Do nothing
 }
 func (v *SemanticVisitor) VisitBuiltinFuncNode(node *ASTBuiltinFuncNode) {
