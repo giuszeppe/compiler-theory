@@ -158,6 +158,7 @@ func (v *SemanticVisitor) VisitAssignmentNode(node *ASTAssignmentNode) {
 	if !ok {
 		panic("Not a variable declaration: " + node.Id.Token.Lexeme)
 	}
+
 	// Check if the type of the expression matches the variable type
 	if getExpressionType(node.Expr, *v.SymbolTable) != varDeclNode.Type {
 		panic(fmt.Sprintf("Type mismatch: expected %v, got %v", varDeclNode.Type, getExpressionType(node.Expr, *v.SymbolTable)))
@@ -183,13 +184,7 @@ func (v *SemanticVisitor) VisitVarDeclNode(node *ASTVarDeclNode) {
 }
 func (v *SemanticVisitor) VisitBlockNode(node *ASTBlockNode) {
 	for _, stmt := range node.Stmts {
-		if _, ok := stmt.(*ASTBlockNode); ok {
-			v.SymbolTable.Push()
-		}
-		stmt.Accept(v)
-		if _, ok := stmt.(*ASTBlockNode); ok {
-			v.SymbolTable.Pop()
-		}
+		pushAndPopIfBlock(v, stmt)
 	}
 }
 func (v *SemanticVisitor) VisitTypeNode(node *ASTTypeNode) {
@@ -201,30 +196,33 @@ func (v *SemanticVisitor) VisitFunctionNode(node *ASTFuncDeclNode) {
 
 func (v *SemanticVisitor) VisitProgramNode(node *ASTProgramNode) {
 	// Visit the block node
-	v.SymbolTable.Push()
-	node.Block.Accept(v)
-	v.SymbolTable.Pop()
+	pushAndPopIfBlock(v, &node.Block)
 }
 func (v *SemanticVisitor) VisitIfNode(node *ASTIfNode) {
 	// Visit the condition and the block
 	node.Condition.Accept(v)
-	v.SymbolTable.Push()
-	node.ThenBlock.Accept(v)
-	v.SymbolTable.Pop()
+	pushAndPopIfBlock(v, node.ThenBlock)
 	if node.ElseBlock != nil {
-		v.SymbolTable.Push()
-		node.ElseBlock.Accept(v)
-		v.SymbolTable.Pop()
-
+		pushAndPopIfBlock(v, node.ElseBlock)
 	}
+}
+
+func pushAndPopIfBlock(v *SemanticVisitor, block ASTNode) {
+	// Check if the block is a block node
+	if _, ok := block.(*ASTBlockNode); ok {
+		v.SymbolTable.Push()
+		block.Accept(v)
+		v.SymbolTable.Pop()
+	} else {
+		block.Accept(v)
+	}
+
 }
 
 func (v *SemanticVisitor) VisitWhileNode(node *ASTWhileNode) {
 	// Visit the condition and the block
 	node.Condition.Accept(v)
-	v.SymbolTable.Push()
-	node.Block.Accept(v)
-	v.SymbolTable.Pop()
+	pushAndPopIfBlock(v, node.Block)
 }
 
 func (v *SemanticVisitor) VisitForNode(node *ASTForNode) {
@@ -328,6 +326,7 @@ func (v *SemanticVisitor) VisitFuncDeclNode(node *ASTFuncDeclNode) {
 
 	v.SymbolTable.Insert(node.Name, node)
 	v.SymbolTable.Push()
+	defer v.SymbolTable.Pop()
 	node.Params.Accept(v)
 	node.Block.Accept(v)
 	// Check if the return type is valid
@@ -345,7 +344,6 @@ func (v *SemanticVisitor) VisitFuncDeclNode(node *ASTFuncDeclNode) {
 	if !hasReturn {
 		panic("Function must have a return statement")
 	}
-	v.SymbolTable.Pop()
 }
 
 func (v *SemanticVisitor) VisitSimpleExpressionNode(node *ASTSimpleExpression) {
