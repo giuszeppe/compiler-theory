@@ -2,80 +2,178 @@ package main
 
 import "fmt"
 
-type Frame map[string]FrameItem
+type GenStack[T any] struct {
+	items []T
+}
+
+// Push adds an item to the top of the stack, last inserted item is [0]
+func (s *GenStack[T]) Push(item T) {
+	s.items = append([]T{item}, s.items...)
+}
+
+// Pop removes and returns the top item
+func (s *GenStack[T]) Pop() (T, error) {
+	if len(s.items) == 0 {
+		var zero T
+		return zero, fmt.Errorf("stack is empty")
+	}
+	last := s.items[0]
+	s.items = s.items[1:]
+	return last, nil
+}
+
+// Peek returns the top item without removing it
+func (s *GenStack[T]) Peek() (T, error) {
+	if len(s.items) == 0 {
+		var zero T
+
+		return zero, fmt.Errorf("stack is empty")
+	}
+	return s.items[0], nil
+}
+
+// IsEmpty checks if the stack is empty
+func (s *GenStack[T]) IsEmpty() bool {
+	return len(s.items) == 0
+}
+
+// Size returns the number of items in the stack
+func (s *GenStack[T]) Size() int {
+	return len(s.items)
+}
 
 type GeneratorVisitor struct {
-	SymbolTable  *GeneratorSymbolTable
+	SymbolTable  *FrameStack
 	Instructions []string
 }
 
-type FrameItem struct {
-	Node         ASTNode
-	Type         string
-	IndexInFrame int
-	LevelInSoF   int
+type SymbolGen struct {
+	Name       string
+	FrameIndex int // index inside its own frame
 }
 
-type GeneratorSymbolTable struct {
-	Frames Stack[Frame]
+type Frame struct {
+	Symbols map[string]SymbolGen
 }
 
-func (st *GeneratorSymbolTable) Push() {
-	newFrame := make(Frame)
-	if !st.Frames.IsEmpty() {
-		// Copy the current scope to the new scope
+type FrameStack struct {
+	Frames GenStack[Frame] // Top of stack is Frames[0]
+}
 
-		// update all frame items to add 1 to their level in the stack of frames
-		newItems := Stack[Frame]{}
-		for _, v := range st.Frames.items {
-			for key, item := range v {
-				v[key] = FrameItem{
-					Node:         item.Node,
-					Type:         item.Type,
-					IndexInFrame: item.IndexInFrame,
-					LevelInSoF:   item.LevelInSoF + 1,
-				}
-			}
-			newItems.Push(v)
+// NewFrameStack creates a new stack
+func NewFrameStack() *FrameStack {
+	return &FrameStack{
+		Frames: GenStack[Frame]{},
+	}
+}
+
+// PushFrame adds a new empty frame at the top
+func (fs *FrameStack) PushFrame() {
+	frame := Frame{
+		Symbols: make(map[string]SymbolGen),
+	}
+	fs.Frames.Push(frame)
+}
+
+// PopFrame removes the top frame
+func (fs *FrameStack) PopFrame() {
+	if fs.Frames.Size() > 0 {
+		fs.Frames.Pop()
+	}
+}
+
+// Define adds a symbol to the top frame
+func (fs *FrameStack) Define(name string) SymbolGen {
+	if fs.Frames.Size() == 0 {
+		panic("no frame to define symbol in")
+	}
+	frame, _ := fs.Frames.Peek()
+	sym := SymbolGen{
+		Name:       name,
+		FrameIndex: len(frame.Symbols), // number of symbols already in the frame
+	}
+	frame.Symbols[name] = sym
+	return sym
+}
+
+// Resolve looks for a symbol starting from top frame
+func (fs *FrameStack) Resolve(name string) (SymbolGen, int, bool) {
+
+	for frameIndex, frame := range fs.Frames.items {
+		if sym, ok := frame.Symbols[name]; ok {
+			return sym, frameIndex, true
 		}
-		st.Frames = newItems
 	}
-	st.Frames.Push(newFrame)
+	return SymbolGen{}, -1, false
 }
-func (st *GeneratorSymbolTable) Pop() {
-	// update all frame items to remove 1 from their level in the stack of frames
-	newItems := Stack[Frame]{}
-	for _, v := range st.Frames.items {
-		for key, item := range v {
-			v[key] = FrameItem{
-				Node:         item.Node,
-				Type:         item.Type,
-				IndexInFrame: item.IndexInFrame,
-				LevelInSoF:   item.LevelInSoF - 1,
-			}
-		}
-		newItems.Push(v)
-	}
-	st.Frames = newItems
-	st.Frames.Pop()
-}
-func (st *GeneratorSymbolTable) Lookup(name string) (FrameItem, bool) {
-	currentFrame, err := st.Frames.Peek()
-	if err != nil {
-		return FrameItem{}, false
-	}
-	if node, ok := currentFrame[name]; ok {
-		return node, true
-	}
-	return FrameItem{}, false
-}
-func (st *GeneratorSymbolTable) Insert(name string, node FrameItem) {
-	currentFrame, err := st.Frames.Peek()
-	if err != nil {
-		return
-	}
-	currentFrame[name] = node
-}
+
+// type FrameItem struct {
+// 	Node         ASTNode
+// 	Type         string
+// 	IndexInFrame int
+// 	LevelInSoF   int
+// }
+
+// type GeneratorSymbolTable struct {
+// 	Frames Stack[Frame]
+// }
+
+// func (st *GeneratorSymbolTable) Push() {
+// 	newFrame := make(Frame)
+// 	if !st.Frames.IsEmpty() {
+// 		// Copy the current scope to the new scope
+
+// 		// update all frame items to add 1 to their level in the stack of frames
+// 		newItems := Stack[Frame]{}
+// 		for _, v := range st.Frames.items {
+// 			for key, item := range v {
+// 				v[key] = FrameItem{
+// 					Node:         item.Node,
+// 					Type:         item.Type,
+// 					IndexInFrame: item.IndexInFrame,
+// 					LevelInSoF:   item.LevelInSoF + 1,
+// 				}
+// 			}
+// 			newItems.Push(v)
+// 		}
+// 		st.Frames = newItems
+// 	}
+// 	st.Frames.Push(newFrame)
+// }
+// func (st *GeneratorSymbolTable) Pop() {
+// 	// update all frame items to remove 1 from their level in the stack of frames
+// 	newItems := Stack[Frame]{}
+// 	for _, v := range st.Frames.items {
+// 		for key, item := range v {
+// 			v[key] = FrameItem{
+// 				Node:         item.Node,
+// 				Type:         item.Type,
+// 				IndexInFrame: item.IndexInFrame,
+// 				LevelInSoF:   item.LevelInSoF - 1,
+// 			}
+// 		}
+// 		newItems.Push(v)
+// 	}
+// 	st.Frames = newItems
+// 	st.Frames.Pop()
+// }
+// func (st *GeneratorSymbolTable) Lookup(name string) (FrameItem, bool) {
+// 	currentFrame, err := st.Frames.Peek()
+// 	if err != nil {
+// 		return FrameItem{}, false
+// 	}
+// 	if node, ok := currentFrame[name]; ok {
+// 		return node, true
+// 	}
+// 	return FrameItem{}, false
+// }
+// func (st *GeneratorSymbolTable) Insert(name string, node FrameItem) {
+// 	currentFrame, err := st.Frames.Peek()
+// 	if err != nil {
+// 		return
+// 	}
+// 	currentFrame[name] = node
+// }
 
 func (v *GeneratorVisitor) emit(instr string) int {
 	v.Instructions = append(v.Instructions, instr)
@@ -84,14 +182,16 @@ func (v *GeneratorVisitor) emit(instr string) int {
 
 func NewGeneratorVisitor() *GeneratorVisitor {
 	return &GeneratorVisitor{
-		SymbolTable: &GeneratorSymbolTable{},
+		SymbolTable: &FrameStack{},
 	}
 }
 
 // ====================================================== Entry Points========================================== //
 func (v *GeneratorVisitor) VisitProgramNode(node *ASTProgramNode) {
 	v.emit(".main")
+	v.SymbolTable.PushFrame()
 	openFrameAndPopIfBlock(v, &node.Block)
+	v.SymbolTable.PopFrame()
 	v.emit("halt")
 }
 func (v *GeneratorVisitor) VisitBlockNode(node *ASTBlockNode) {
@@ -265,30 +365,31 @@ func (v *GeneratorVisitor) VisitTypeNode(node *ASTTypeNode) {}
 // ===== Declarations & Assignments =====
 func (v *GeneratorVisitor) VisitVarDeclNode(node *ASTVarDeclNode) {
 	// store value
-	val, _ := v.SymbolTable.Frames.Peek()
-	item := FrameItem{Type: node.Type, Node: node, IndexInFrame: len(val), LevelInSoF: 0}
-	v.SymbolTable.Insert(node.Name, item)
+	// val, _ := v.SymbolTable.Frames.Peek()
+	// item := FrameItem{Type: node.Type, Node: node, IndexInFrame: len(val), LevelInSoF: 0}
+	item := v.SymbolTable.Define(node.Name)
+	_, a, _ := v.SymbolTable.Resolve(node.Name)
 
 	// evaluate expression
 	node.Expression.Accept(v)
-	v.emit(fmt.Sprintf("push %d", item.IndexInFrame))
-	v.emit(fmt.Sprintf("push %d", item.LevelInSoF))
+	v.emit(fmt.Sprintf("push %d", item.FrameIndex))
+	v.emit(fmt.Sprintf("push %d", a))
 	v.emit("st")
 }
 func (v *GeneratorVisitor) VisitAssignmentNode(node *ASTAssignmentNode) {
 	// evaluate RHS
 	node.Expr.Accept(v)
 	// lookup var
-	item, _ := v.SymbolTable.Lookup(node.Id.Token.Lexeme)
-	v.emit(fmt.Sprintf("push %d", item.IndexInFrame))
-	v.emit(fmt.Sprintf("push %d", item.LevelInSoF))
+	item, level, _ := v.SymbolTable.Resolve(node.Id.Token.Lexeme)
+	v.emit(fmt.Sprintf("push %d", item.FrameIndex))
+	v.emit(fmt.Sprintf("push %d", level))
 	v.emit("st")
 }
 
 // ===== Variables =====
 func (v *GeneratorVisitor) VisitVariableNode(node *ASTVariableNode) {
-	item, _ := v.SymbolTable.Lookup(node.Token.Lexeme)
-	v.emit(fmt.Sprintf("push [%d:%d]", item.IndexInFrame, item.LevelInSoF))
+	item, level, _ := v.SymbolTable.Resolve(node.Token.Lexeme)
+	v.emit(fmt.Sprintf("push [%d:%d]", item.FrameIndex, level))
 }
 
 func (v *GeneratorVisitor) VisitSimpleExpressionNode(node *ASTSimpleExpression) {}
@@ -307,7 +408,7 @@ stack. If a==1 jump, set PC to b.
 func (v *GeneratorVisitor) VisitWhileNode(node *ASTWhileNode) {}
 
 func (v *GeneratorVisitor) VisitForNode(node *ASTForNode) {
-	v.SymbolTable.Push()
+	v.SymbolTable.PushFrame()
 	v.emit("push " + fmt.Sprint(CountVarDecls(node.Block)+CountVarDecls(node.VarDecl)))
 	v.emit("oframe")
 
@@ -331,9 +432,9 @@ func (v *GeneratorVisitor) VisitForNode(node *ASTForNode) {
 	v.emit("jmp")
 	endIdx := v.emit("cframe")
 
-	v.Instructions[exitLoopInstructionIdx] = fmt.Sprintf("push #PC+%d", endIdx-idx)
+	v.Instructions[exitLoopInstructionIdx] = fmt.Sprintf("push #PC+%d", endIdx-idx-1)
 
-	v.SymbolTable.Pop()
+	v.SymbolTable.PopFrame()
 }
 
 func (v *GeneratorVisitor) VisitIfNode(node *ASTIfNode) {}
