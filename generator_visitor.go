@@ -331,9 +331,9 @@ func (v *GeneratorVisitor) VisitBinaryOpNode(node *ASTBinaryOpNode) {
 		v.emit("div")
 	case "%":
 		v.emit("mod")
-	case "&&":
+	case "and":
 		v.emit("and")
-	case "||":
+	case "or":
 		v.emit("or")
 	case "==":
 		v.emit("eq")
@@ -405,7 +405,33 @@ jmp - unconditional jump; sets PC to value at top of stack.
 cjmp, cjmp2 - conditional jump; pops twp values a,b from
 stack. If a==1 jump, set PC to b.
 */
-func (v *GeneratorVisitor) VisitWhileNode(node *ASTWhileNode) {}
+func (v *GeneratorVisitor) VisitWhileNode(node *ASTWhileNode) {
+	v.SymbolTable.PushFrame()
+	v.emit("push " + fmt.Sprint(CountVarDecls(node.Block)))
+	idxCondition := v.emit("oframe")
+	idxCondition++
+
+	node.Condition.Accept(v)
+	idxEnd := v.emit("")
+
+	v.Instructions[idxEnd] = fmt.Sprintf("push #PC+%d", 4)
+	idx := v.emit("cjmp")
+
+	exitLoopInstructionIdx := v.emit("push #TBD")
+	v.emit("jmp")
+	// previousInstructionCount := len(v.Instructions)
+
+	node.Block.Accept(v)
+
+	// blockCount := len(v.Instructions) - previousInstructionCount
+	v.emit("push " + fmt.Sprint(idxCondition)) // change to #PC+n where n is the number of instructions in the block to go back to the condition
+	v.emit("jmp")
+	endIdx := v.emit("cframe")
+
+	v.Instructions[exitLoopInstructionIdx] = fmt.Sprintf("push #PC+%d", endIdx-idx-1)
+
+	v.SymbolTable.PopFrame()
+}
 
 func (v *GeneratorVisitor) VisitForNode(node *ASTForNode) {
 	v.SymbolTable.PushFrame()
