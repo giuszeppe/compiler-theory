@@ -130,7 +130,7 @@ func (p *Parser) Parse(g *Grammar) (ASTNode, error) {
 			}
 			ri, ok := lookups[tok.Type]
 			if !ok {
-				return nil, fmt.Errorf("no rule for nonterminal %q on lookahead %v", s, tok.Type)
+				return nil, fmt.Errorf("no rule for nonterminal %q on lookahead %v, position %v lexeme %v", s, tok.Type, pos, tok.Lexeme)
 			}
 			rule := g.Rules[ri]
 
