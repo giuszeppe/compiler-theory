@@ -283,7 +283,7 @@ type ASTUnaryOpNode struct {
 
 func (n *ASTUnaryOpNode) Accept(visitor ASTVisitor) {
 	// Implement the Accept method for ASTUnaryOpNode
-	fmt.Println("Visiting ASTUnaryOpNode")
+	visitor.VisitUnaryOpNode(n)
 }
 
 type ASTBooleanNode struct {
