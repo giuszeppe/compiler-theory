@@ -123,6 +123,10 @@ func NewGeneratorVisitor() *GeneratorVisitor {
 // ====================================================== Entry Points========================================== //
 func (v *GeneratorVisitor) VisitProgramNode(node *ASTProgramNode) {
 	v.emit(".main")
+	v.emit("push #PC+3")
+	v.emit("jmp")
+	v.emit("halt")
+
 	v.SymbolTable.PushFrame()
 	openFrameAndPopIfBlock(v, &node.Block)
 	v.SymbolTable.PopFrame()
@@ -171,8 +175,8 @@ func (v *GeneratorVisitor) VisitBuiltinFuncNode(node *ASTBuiltinFuncNode) {
 		}
 		v.emit("write")
 	case "__write_box":
-		for _, arg := range node.Args {
-			arg.Accept(v)
+		for i := len(node.Args) - 1; 0 <= i; i-- {
+			node.Args[i].Accept(v)
 		}
 		v.emit("writebox")
 	case "__print":
@@ -197,11 +201,7 @@ func (v *GeneratorVisitor) VisitFuncDeclNode(node *ASTFuncDeclNode) {
 	v.SymbolTable.PushFrame()
 	v.emit("." + node.Name)
 	v.emit(fmt.Sprintf("push %d", CountVarDecls(node.Block)))
-	v.emit("oframe")
-
-	// define function
-	v.SymbolTable.Define(node.Name)
-	v.SymbolTable.Resolve(node.Name)
+	v.emit("alloc")
 
 	// visit params
 	node.Params.Accept(v)
@@ -212,9 +212,14 @@ func (v *GeneratorVisitor) VisitFuncDeclNode(node *ASTFuncDeclNode) {
 	// pop frame, not needed since return node places it
 	// endIdx := v.emit("cframe")
 	v.Instructions[skipFunctionBodyIdx] = fmt.Sprint("push #PC+", len(v.Instructions)-skipFunctionBodyIdx)
+	v.SymbolTable.PopFrame()
 }
 
-func (v *GeneratorVisitor) VisitFormalParamsNode(node *ASTFormalParamsNode) {}
+func (v *GeneratorVisitor) VisitFormalParamsNode(node *ASTFormalParamsNode) {
+	for _, param := range node.Params {
+		v.SymbolTable.Define(param.(*ASTVarDeclNode).Name)
+	}
+}
 
 func (v *GeneratorVisitor) VisitFormalParamNode(node *ASTFormalParamNode) {}
 
@@ -235,13 +240,22 @@ ret - Pop value a from address stack and set program
 counter to a. Pops frame from memory stack i.e. closes the
 current scope.
 */
-func (v *GeneratorVisitor) VisitFuncCallNode(node *ASTFuncCallNode) {}
+func (v *GeneratorVisitor) VisitFuncCallNode(node *ASTFuncCallNode) {
+
+	params := node.Params.(*ASTActualParamsNode)
+	for i := len(params.Params) - 1; i >= 0; i-- {
+		params.Params[i].Accept(v)
+	}
+	v.emit("push " + fmt.Sprint(len(params.Params)))
+	v.emit("push ." + node.Name)
+	v.emit("call")
+}
 
 func (v *GeneratorVisitor) VisitPrintNode(node *ASTPrintNode) {}
 
 func (v *GeneratorVisitor) VisitReturnNode(node *ASTReturnNode) {
-	v.emit("cframe")
 	node.Expr.Accept(v)
+	v.emit("cframe")
 	v.emit("ret")
 }
 
@@ -450,7 +464,7 @@ func (v *GeneratorVisitor) VisitIfNode(node *ASTIfNode) {
 	v.emit("jmp")
 
 	if node.ElseBlock != nil {
-		v.Instructions[elseBlockLocation] = fmt.Sprintf("push #PC+%d", endIdx-idx)
+		v.Instructions[elseBlockLocation] = fmt.Sprintf("push #PC+%d", skipElseIdx-idx+1)
 	} else {
 		v.Instructions[elseBlockLocation] = fmt.Sprintf("push #PC+%d", endIdx-idx-2)
 	}
@@ -459,6 +473,7 @@ func (v *GeneratorVisitor) VisitIfNode(node *ASTIfNode) {
 	if node.ElseBlock != nil {
 		node.ElseBlock.Accept(v)
 	}
+	v.emit("cframe")
 	elseSize = len(v.Instructions) - elseSize
 	v.Instructions[skipElseIdx] = fmt.Sprintf("push #PC+%d", elseSize+2)
 
