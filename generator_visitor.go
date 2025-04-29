@@ -1,6 +1,8 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+)
 
 type GenStack[T any] struct {
 	items []T
@@ -241,6 +243,11 @@ func (v *GeneratorVisitor) VisitBuiltinFuncNode(node *ASTBuiltinFuncNode) {
 			arg.Accept(v)
 		}
 		v.emit("writebox")
+	case "__print":
+		for i := len(node.Args) - 1; 0 <= i; i-- {
+			node.Args[i].Accept(v)
+		}
+		v.emit("print")
 	case "__clear":
 		node.Args[0].Accept(v)
 		v.emit("clear")
@@ -355,7 +362,7 @@ func (v *GeneratorVisitor) VisitUnaryOpNode(node *ASTUnaryOpNode) {
 		v.emit("dec")
 	case "+":
 		v.emit("inc")
-	case "!":
+	case "not":
 		v.emit("not")
 	}
 }
@@ -463,7 +470,40 @@ func (v *GeneratorVisitor) VisitForNode(node *ASTForNode) {
 	v.SymbolTable.PopFrame()
 }
 
-func (v *GeneratorVisitor) VisitIfNode(node *ASTIfNode) {}
+func (v *GeneratorVisitor) VisitIfNode(node *ASTIfNode) {
+	v.SymbolTable.PushFrame()
+	v.emit("push " + fmt.Sprint(CountVarDecls(node.ThenBlock)))
+	v.emit("oframe")
+
+	node.Condition.Accept(v)
+	v.emit("push #PC+4")
+	idx := v.emit("cjmp")
+
+	elseBlockLocation := v.emit("push #TBD")
+	v.emit("jmp")
+
+	node.ThenBlock.Accept(v)
+
+	endIdx := v.emit("cframe")
+	skipElseIdx := v.emit("push #PC+TBD")
+	v.emit("jmp")
+
+	if node.ElseBlock != nil {
+		v.Instructions[elseBlockLocation] = fmt.Sprintf("push #PC+%d", endIdx-idx)
+	} else {
+		v.Instructions[elseBlockLocation] = fmt.Sprintf("push #PC+%d", endIdx-idx-2)
+	}
+
+	elseSize := len(v.Instructions)
+	if node.ElseBlock != nil {
+		node.ElseBlock.Accept(v)
+	}
+	elseSize = len(v.Instructions) - elseSize
+	v.Instructions[skipElseIdx] = fmt.Sprintf("push #PC+%d", elseSize+2)
+
+	v.SymbolTable.PopFrame()
+
+}
 
 func (v *GeneratorVisitor) VisitTypeCastNode(node *ASTTypeCastNode) {}
 
