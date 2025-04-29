@@ -437,7 +437,7 @@ func (l *Lexer) initialiseTable() {
 	l.Tx[StateMultilineAlmostClosed][Star] = StateMultilineAlmostClosed
 
 	for idx := 0; idx < int(LexemeCount); idx++ {
-		if idx != Star {
+		if idx != Star && idx != Slash {
 			l.Tx[StateMultilineAlmostClosed][idx] = StateMultilineCommentOpen
 			l.Tx[StateMultilineCommentOpen][idx] = StateMultilineCommentOpen
 		}
