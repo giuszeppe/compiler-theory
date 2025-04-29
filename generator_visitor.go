@@ -255,7 +255,6 @@ func (v *GeneratorVisitor) VisitPrintNode(node *ASTPrintNode) {}
 
 func (v *GeneratorVisitor) VisitReturnNode(node *ASTReturnNode) {
 	node.Expr.Accept(v)
-	v.emit("cframe")
 	v.emit("ret")
 }
 
