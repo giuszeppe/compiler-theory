@@ -109,74 +109,6 @@ func (fs *FrameStack) Resolve(name string) (SymbolGen, int, bool) {
 	return SymbolGen{}, -1, false
 }
 
-// type FrameItem struct {
-// 	Node         ASTNode
-// 	Type         string
-// 	IndexInFrame int
-// 	LevelInSoF   int
-// }
-
-// type GeneratorSymbolTable struct {
-// 	Frames Stack[Frame]
-// }
-
-// func (st *GeneratorSymbolTable) Push() {
-// 	newFrame := make(Frame)
-// 	if !st.Frames.IsEmpty() {
-// 		// Copy the current scope to the new scope
-
-// 		// update all frame items to add 1 to their level in the stack of frames
-// 		newItems := Stack[Frame]{}
-// 		for _, v := range st.Frames.items {
-// 			for key, item := range v {
-// 				v[key] = FrameItem{
-// 					Node:         item.Node,
-// 					Type:         item.Type,
-// 					IndexInFrame: item.IndexInFrame,
-// 					LevelInSoF:   item.LevelInSoF + 1,
-// 				}
-// 			}
-// 			newItems.Push(v)
-// 		}
-// 		st.Frames = newItems
-// 	}
-// 	st.Frames.Push(newFrame)
-// }
-// func (st *GeneratorSymbolTable) Pop() {
-// 	// update all frame items to remove 1 from their level in the stack of frames
-// 	newItems := Stack[Frame]{}
-// 	for _, v := range st.Frames.items {
-// 		for key, item := range v {
-// 			v[key] = FrameItem{
-// 				Node:         item.Node,
-// 				Type:         item.Type,
-// 				IndexInFrame: item.IndexInFrame,
-// 				LevelInSoF:   item.LevelInSoF - 1,
-// 			}
-// 		}
-// 		newItems.Push(v)
-// 	}
-// 	st.Frames = newItems
-// 	st.Frames.Pop()
-// }
-// func (st *GeneratorSymbolTable) Lookup(name string) (FrameItem, bool) {
-// 	currentFrame, err := st.Frames.Peek()
-// 	if err != nil {
-// 		return FrameItem{}, false
-// 	}
-// 	if node, ok := currentFrame[name]; ok {
-// 		return node, true
-// 	}
-// 	return FrameItem{}, false
-// }
-// func (st *GeneratorSymbolTable) Insert(name string, node FrameItem) {
-// 	currentFrame, err := st.Frames.Peek()
-// 	if err != nil {
-// 		return
-// 	}
-// 	currentFrame[name] = node
-// }
-
 func (v *GeneratorVisitor) emit(instr string) int {
 	v.Instructions = append(v.Instructions, instr)
 	return len(v.Instructions) - 1
@@ -248,6 +180,9 @@ func (v *GeneratorVisitor) VisitBuiltinFuncNode(node *ASTBuiltinFuncNode) {
 			node.Args[i].Accept(v)
 		}
 		v.emit("print")
+	case "__random_int":
+		node.Args[0].Accept(v)
+		v.emit("irnd")
 	case "__clear":
 		node.Args[0].Accept(v)
 		v.emit("clear")
@@ -255,7 +190,29 @@ func (v *GeneratorVisitor) VisitBuiltinFuncNode(node *ASTBuiltinFuncNode) {
 }
 
 // Functions node
-func (v *GeneratorVisitor) VisitFuncDeclNode(node *ASTFuncDeclNode) {}
+func (v *GeneratorVisitor) VisitFuncDeclNode(node *ASTFuncDeclNode) {
+	// push frame
+	skipFunctionBodyIdx := v.emit("push TBD")
+	v.emit("jmp")
+	v.SymbolTable.PushFrame()
+	v.emit("." + node.Name)
+	v.emit(fmt.Sprintf("push %d", CountVarDecls(node.Block)))
+	v.emit("oframe")
+
+	// define function
+	v.SymbolTable.Define(node.Name)
+	v.SymbolTable.Resolve(node.Name)
+
+	// visit params
+	node.Params.Accept(v)
+
+	// visit block
+	node.Block.Accept(v)
+
+	// pop frame, not needed since return node places it
+	// endIdx := v.emit("cframe")
+	v.Instructions[skipFunctionBodyIdx] = fmt.Sprint("push #PC+", len(v.Instructions)-skipFunctionBodyIdx)
+}
 
 func (v *GeneratorVisitor) VisitFormalParamsNode(node *ASTFormalParamsNode) {}
 
@@ -282,7 +239,11 @@ func (v *GeneratorVisitor) VisitFuncCallNode(node *ASTFuncCallNode) {}
 
 func (v *GeneratorVisitor) VisitPrintNode(node *ASTPrintNode) {}
 
-func (v *GeneratorVisitor) VisitReturnNode(node *ASTReturnNode) {}
+func (v *GeneratorVisitor) VisitReturnNode(node *ASTReturnNode) {
+	v.emit("cframe")
+	node.Expr.Accept(v)
+	v.emit("ret")
+}
 
 /*
 delay - Pops x from the operand stack and delays (pauses)
@@ -505,7 +466,9 @@ func (v *GeneratorVisitor) VisitIfNode(node *ASTIfNode) {
 
 }
 
-func (v *GeneratorVisitor) VisitTypeCastNode(node *ASTTypeCastNode) {}
+func (v *GeneratorVisitor) VisitTypeCastNode(node *ASTTypeCastNode) {
+	node.Expr.Accept(v)
+}
 
 func (v *GeneratorVisitor) VisitEpsilon(node *ASTEpsilon) {}
 

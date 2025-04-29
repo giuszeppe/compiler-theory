@@ -139,6 +139,10 @@ func getExpressionType(node ASTNode, symbolTable SymbolTable) string {
 		return getExpressionType(n.Expr, symbolTable)
 	case *ASTExpressionNode:
 		return getExpressionType(n.Expr, symbolTable)
+	case *ASTTypeCastNode:
+		n, _ = node.(*ASTTypeCastNode)
+
+		return n.Type
 	case *ASTEpsilon:
 		return ""
 

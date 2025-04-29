@@ -659,6 +659,17 @@ func NewGrammar() *Grammar {
 		},
 	})
 
+	g.Rules = append(g.Rules, Rule{
+		LHS: "Statement",
+		RHS: []Symbol{ClearToken, "Expr", SemicolonToken},
+		Action: func(ch []ASTNode) ASTNode {
+			return &ASTBuiltinFuncNode{
+				Name: ch[0].(*ASTSimpleExpression).Token.Lexeme,
+				Args: []ASTNode{ch[1]},
+			}
+		},
+	})
+
 	// - Factor → __width
 	g.Rules = append(g.Rules, Rule{
 		LHS: "Factor",
@@ -710,7 +721,7 @@ func NewGrammar() *Grammar {
 		Action: func(ch []ASTNode) ASTNode {
 			return &ASTBuiltinFuncNode{
 				Name: ch[0].(*ASTSimpleExpression).Token.Lexeme,
-				Args: []ASTNode{ch[1]},
+				Args: []ASTNode{ch[2]},
 			}
 		},
 	})

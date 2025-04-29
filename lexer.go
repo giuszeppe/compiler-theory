@@ -104,6 +104,8 @@ func (t TokenType) String() string {
 		return "PadRead"
 	case PadRandI:
 		return "PadRandI"
+	case ClearToken:
+		return "Clear"
 	default:
 		return "Unknown"
 	}
@@ -165,6 +167,7 @@ const (
 	Delay
 	WriteBox
 	Write
+	ClearToken
 
 	// Type
 	IntType
@@ -483,6 +486,8 @@ func getKeywordTokenByLexeme(lexeme string) (Token, bool) {
 		return Token{PadRead, lexeme}, true
 	case "__random_int":
 		return Token{PadRandI, lexeme}, true
+	case "__clear":
+		return Token{ClearToken, lexeme}, true
 	case "and":
 		return Token{AndToken, lexeme}, true
 	case "or":
