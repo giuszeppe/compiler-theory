@@ -1,6 +1,8 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+)
 
 type Scope map[string]ASTNode
 
@@ -102,6 +104,10 @@ func getExpressionType(node ASTNode, symbolTable SymbolTable) string {
 		if leftType != rightType {
 			panic("Type mismatch: expected " + leftType + ", got " + rightType)
 		}
+		binaryOpNode := node.(*ASTBinaryOpNode)
+		if binaryOpNode.Operator == "<" || binaryOpNode.Operator == ">" || binaryOpNode.Operator == "<=" || binaryOpNode.Operator == ">=" || binaryOpNode.Operator == "==" {
+			return "bool"
+		}
 		return leftType
 	case *ASTUnaryOpNode:
 		return getExpressionType(n.Operand, symbolTable)
@@ -144,6 +150,93 @@ func getExpressionType(node ASTNode, symbolTable SymbolTable) string {
 
 		return n.Type
 	case *ASTEpsilon:
+		return ""
+	case *ASTBuiltinFuncNode:
+		switch n.Name {
+		case "__random_int":
+			if len(n.Args) != 1 {
+				panic("Invalid number of arguments for __random_int: expected 1, got " + fmt.Sprint(len(n.Args)))
+			}
+			argType := getExpressionType(n.Args[0], symbolTable)
+			if argType != "int" {
+				panic("Invalid argument type for __random_int: expected int, got " + argType)
+			}
+			return "int"
+		case "__delay":
+			if len(n.Args) != 1 {
+				panic("Invalid number of arguments for __delay: expected 1, got " + fmt.Sprint(len(n.Args)))
+			}
+			argType := getExpressionType(n.Args[0], symbolTable)
+			if argType != "int" {
+				panic("Invalid argument type for __delay: expected int, got " + argType)
+			}
+			return ""
+		case "__height":
+			return "int"
+		case "__width":
+			return "int"
+		case "__write":
+			if len(n.Args) != 3 {
+				panic("Invalid number of arguments for __write: expected 3, got " + fmt.Sprint(len(n.Args)))
+			}
+			arg1Type := getExpressionType(n.Args[0], symbolTable)
+			arg2Type := getExpressionType(n.Args[1], symbolTable)
+			arg3Type := getExpressionType(n.Args[2], symbolTable)
+			if arg1Type != "int" {
+				panic("Invalid argument type for __write: expected int, got " + arg1Type)
+			}
+			if arg2Type != "int" {
+				panic("Invalid argument type for __write: expected int, got " + arg2Type)
+			}
+			if arg3Type != "color" {
+				panic("Invalid argument type for __write: expected color, got " + arg3Type)
+			}
+			return ""
+		case "__print":
+			if len(n.Args) != 1 {
+				panic("Invalid number of arguments for __print: expected 1, got " + fmt.Sprint(len(n.Args)))
+			}
+		case "__write_box":
+			if len(n.Args) != 5 {
+				panic("Invalid number of arguments for __random_int: expected 5 got " + fmt.Sprint(len(n.Args)))
+			}
+			arg1Type := getExpressionType(n.Args[0], symbolTable)
+			arg2Type := getExpressionType(n.Args[1], symbolTable)
+			arg3Type := getExpressionType(n.Args[2], symbolTable)
+			arg4Type := getExpressionType(n.Args[3], symbolTable)
+			arg5Type := getExpressionType(n.Args[4], symbolTable)
+			if arg1Type != "int" {
+				panic("Invalid argument type for __write_box: expected int, got " + arg1Type)
+			}
+			if arg2Type != "int" {
+				panic("Invalid argument type for __write_box: expected int, got " + arg2Type)
+			}
+			if arg3Type != "int" {
+				panic("Invalid argument type for __write_box: expected int, got " + arg3Type)
+			}
+			if arg4Type != "int" {
+				panic("Invalid argument type for __write_box: expected int, got " + arg4Type)
+			}
+			if arg5Type != "color" {
+				panic("Invalid argument type for __write_box: expected color, got " + arg5Type)
+			}
+			return "int"
+		case "__read":
+			if len(n.Args) != 2 {
+				panic("Invalid number of arguments for __read: expected 2, got " + fmt.Sprint(len(n.Args)))
+			}
+			arg1Type := getExpressionType(n.Args[0], symbolTable)
+			arg2Type := getExpressionType(n.Args[1], symbolTable)
+			if arg1Type != "int" {
+				panic("Invalid argument type for __read: expected int, got " + arg1Type)
+			}
+			if arg2Type != "int" {
+				panic("Invalid argument type for __read: expected int, got " + arg2Type)
+			}
+			return "int"
+		default:
+			panic("Unknown builtin function: " + n.Name)
+		}
 		return ""
 
 	default:
@@ -343,19 +436,35 @@ func (v *SemanticVisitor) VisitFuncDeclNode(node *ASTFuncDeclNode) {
 	node.Block.Accept(v)
 	// Check if the return type is valid
 	funcBlock, _ := node.Block.(*ASTBlockNode)
-	hasReturn := false
-	for _, stmt := range funcBlock.Stmts {
-		if ret, ok := stmt.(*ASTReturnNode); ok {
-			hasReturn = true
-			// Check if the return type matches the function return type
-			if getExpressionType(ret.Expr, *v.SymbolTable) != node.ReturnType {
-				panic(fmt.Sprintf("Return type mismatch: expected %v, got %v", node.ReturnType, getExpressionType(ret, *v.SymbolTable)))
-			}
-		}
-	}
+	hasReturn := hasReturnStatement(funcBlock, v, node.ReturnType)
 	if !hasReturn {
 		panic("Function must have a return statement")
 	}
+}
+
+func hasReturnStatement(node ASTNode, v *SemanticVisitor, expectedType string) bool {
+	switch n := node.(type) {
+	case *ASTReturnNode:
+		returnNode := node.(*ASTReturnNode)
+		if getExpressionType(returnNode.Expr, *v.SymbolTable) != expectedType {
+			panic(fmt.Sprintf("Return type mismatch: expected %v, got %v", expectedType, getExpressionType(returnNode.Expr, *v.SymbolTable)))
+		}
+		return true
+	case *ASTBlockNode:
+		for _, stmt := range n.Stmts {
+			if hasReturnStatement(stmt, v, expectedType) {
+				return true
+			}
+		}
+	case *ASTIfNode:
+		if hasReturnStatement(n.ThenBlock, v, expectedType) {
+			if n.ElseBlock != nil {
+				return hasReturnStatement(n.ElseBlock, v, expectedType)
+			}
+			return true
+		}
+	}
+	return false
 }
 
 func (v *SemanticVisitor) VisitSimpleExpressionNode(node *ASTSimpleExpression) {
