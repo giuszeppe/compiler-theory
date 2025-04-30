@@ -659,12 +659,16 @@ func NewGrammar() *Grammar {
 	// - ForVarDecl → 'let' Identifier ':' TypeRule '=' Expr
 	g.Rules = append(g.Rules, Rule{
 		LHS: "ForVarDecl",
-		RHS: []Symbol{Let, Identifier, ColonToken, "TypeRule", EqualsToken, "Expr"},
+		RHS: []Symbol{Let, Identifier, ColonToken, "TypeRule", "VarDeclSuffix"},
 		Action: func(ch []ASTNode) ASTNode {
+			if arrNode, ok := ch[4].(*ASTArrayNode); ok {
+				ch[3].(*ASTTypeNode).Name += "[" + strconv.Itoa(arrNode.Size) + "]"
+				ch[4].(*ASTArrayNode).Type = ch[3].(*ASTTypeNode).Name
+			}
 			return &ASTVarDeclNode{
 				Name:       ch[1].(*ASTSimpleExpression).Token.Lexeme,
 				Type:       ch[3].(*ASTTypeNode).Name,
-				Expression: ch[5],
+				Expression: ch[4],
 			}
 		},
 	})
@@ -680,13 +684,13 @@ func NewGrammar() *Grammar {
 	// - ForAssignment → Identifier '=' Expr
 	g.Rules = append(g.Rules, Rule{
 		LHS: "ForAssignment",
-		RHS: []Symbol{Identifier, EqualsToken, "Expr"},
+		RHS: []Symbol{"Identifier", EqualsToken, "Expr"},
 		Action: func(ch []ASTNode) ASTNode {
 			// ch[0] is *ASTSimpleExpression wrapping the var token
-			varTok := ch[0].(*ASTSimpleExpression).Token
+			varnode := ch[0].(*ASTVariableNode)
 			exprN := ch[2]
 			return &ASTAssignmentNode{
-				Id:   ASTVariableNode{Token: varTok},
+				Id:   *varnode,
 				Expr: exprN,
 			}
 		},
@@ -702,13 +706,17 @@ func NewGrammar() *Grammar {
 	// - Statement → Fun Identifier '(' FormalParams ')' '->' TypeRule Block
 	g.Rules = append(g.Rules, Rule{
 		LHS: "Statement",
-		RHS: []Symbol{Fun, Identifier, LeftParenToken, "FormalParams", RightParenToken, LeftArrowToken, "TypeRule", "Block"},
+		RHS: []Symbol{Fun, Identifier, LeftParenToken, "FormalParams", RightParenToken, LeftArrowToken, "TypeRule", "ArrayTypeSignature", "Block"},
 		Action: func(ch []ASTNode) ASTNode {
+			retType := ch[6].(*ASTTypeNode).Name
+			if _, ok := ch[7].(*ASTEpsilon); !ok {
+				retType += "[" + ch[7].(*ASTSimpleExpression).Token.Lexeme + "]"
+			}
 			return &ASTFuncDeclNode{
 				Name:       ch[1].(*ASTSimpleExpression).Token.Lexeme,
 				Params:     ch[3],
-				ReturnType: ch[6].(*ASTTypeNode).Name,
-				Block:      ch[7].(*ASTBlockNode),
+				ReturnType: retType,
+				Block:      ch[8].(*ASTBlockNode),
 			}
 		},
 	})
@@ -716,14 +724,18 @@ func NewGrammar() *Grammar {
 	// - FormalParams → Identifier ':' TypeRule FormalParamsTail
 	g.Rules = append(g.Rules, Rule{
 		LHS: "FormalParams",
-		RHS: []Symbol{Identifier, ColonToken, "TypeRule", "FormalParamsTail"},
+		RHS: []Symbol{Identifier, ColonToken, "TypeRule", "ArrayTypeSignature", "FormalParamsTail"},
 		Action: func(ch []ASTNode) ASTNode {
+			varType := ch[2].(*ASTTypeNode).Name
+			if _, ok := ch[3].(*ASTEpsilon); !ok {
+				varType += "[" + ch[3].(*ASTSimpleExpression).Token.Lexeme + "]"
+			}
 			param := ASTVarDeclNode{
 				Name:       ch[0].(*ASTSimpleExpression).Token.Lexeme,
-				Type:       ch[2].(*ASTTypeNode).Name,
+				Type:       varType,
 				Expression: &ASTExpressionNode{Expr: &ASTEpsilon{}},
 			}
-			tail := ch[3].(*ASTFormalParamsNode)
+			tail := ch[4].(*ASTFormalParamsNode)
 
 			return &ASTFormalParamsNode{
 				Params: append([]ASTNode{&param}, tail.Params...),
@@ -734,18 +746,42 @@ func NewGrammar() *Grammar {
 	// - FormalParamsTail → ',' Identifier ':' TypeRule FormalParamsTail
 	g.Rules = append(g.Rules, Rule{
 		LHS: "FormalParamsTail",
-		RHS: []Symbol{CommaToken, Identifier, ColonToken, "TypeRule", "FormalParamsTail"},
+		RHS: []Symbol{CommaToken, Identifier, ColonToken, "TypeRule", "ArrayTypeSignature", "FormalParamsTail"},
 		Action: func(ch []ASTNode) ASTNode {
+			varType := ch[3].(*ASTTypeNode).Name
+			if _, ok := ch[4].(*ASTEpsilon); !ok {
+				varType += "[" + ch[4].(*ASTSimpleExpression).Token.Lexeme + "]"
+			}
 			param := ASTVarDeclNode{
 				Name:       ch[1].(*ASTSimpleExpression).Token.Lexeme,
-				Type:       ch[3].(*ASTTypeNode).Name,
+				Type:       varType,
 				Expression: &ASTExpressionNode{Expr: &ASTEpsilon{}},
 			}
-			tail := ch[4].(*ASTFormalParamsNode)
+			tail := ch[5].(*ASTFormalParamsNode)
 
 			return &ASTFormalParamsNode{
 				Params: append([]ASTNode{&param}, tail.Params...),
 			}
+		},
+	})
+
+	// - ArrayTypeSignature → '[' Integer ']'
+	g.Rules = append(g.Rules, Rule{
+		LHS: "ArrayTypeSignature",
+		RHS: []Symbol{LeftBracketToken, Integer, RightBracketToken},
+		Action: func(ch []ASTNode) ASTNode {
+			// ch[0] is a left bracket, ch[1] is *ASTVarDeclArrayNode
+			return ch[1]
+		},
+	})
+
+	// - ArrayTypeSignature → ε
+	g.Rules = append(g.Rules, Rule{
+		LHS: "ArrayTypeSignature",
+		RHS: []Symbol{},
+		Action: func(ch []ASTNode) ASTNode {
+			// ch[0] is a left bracket, ch[1] is *ASTVarDeclArrayNode
+			return &ASTEpsilon{}
 		},
 	})
 

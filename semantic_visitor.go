@@ -88,7 +88,7 @@ func getExpressionType(node ASTNode, symbolTable SymbolTable) string {
 	case *ASTBooleanNode:
 		return "bool"
 	case *ASTColorNode:
-		return "color"
+		return "colour"
 	case *ASTVariableNode:
 		variableNode, ok := node.(*ASTVariableNode)
 		if !ok {
@@ -204,7 +204,7 @@ func getExpressionType(node ASTNode, symbolTable SymbolTable) string {
 			if arg2Type != "int" {
 				panic("Invalid argument type for __write: expected int, got " + arg2Type)
 			}
-			if arg3Type != "color" {
+			if arg3Type != "colour" {
 				panic("Invalid argument type for __write: expected color, got " + arg3Type)
 			}
 			return ""
@@ -233,7 +233,7 @@ func getExpressionType(node ASTNode, symbolTable SymbolTable) string {
 			if arg4Type != "int" {
 				panic("Invalid argument type for __write_box: expected int, got " + arg4Type)
 			}
-			if arg5Type != "color" {
+			if arg5Type != "colour" {
 				panic("Invalid argument type for __write_box: expected color, got " + arg5Type)
 			}
 			return "int"

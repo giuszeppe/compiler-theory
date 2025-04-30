@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 )
 
@@ -180,9 +181,11 @@ func (v *GeneratorVisitor) VisitBuiltinFuncNode(node *ASTBuiltinFuncNode) {
 		for i := len(node.Args) - 1; 0 <= i; i-- {
 			node.Args[i].Accept(v)
 		}
-		item, _, _ := v.SymbolTable.Resolve(node.Args[0].(*ASTVariableNode).Token.Lexeme)
-		if strings.Contains(item.Type, "[") {
-			v.emit("push " + item.Type[strings.Index(item.Type, "[")+1:strings.LastIndex(item.Type, "]")])
+		if strings.Contains(v.getExpressionType(node.Args[0]), "[") {
+			Type := v.getExpressionType(node.Args[0])
+			itemNumber := Type[strings.Index(Type, "[")+1 : strings.LastIndex(Type, "]")]
+
+			v.emit("push " + itemNumber)
 			v.emit("printa")
 		} else {
 			v.emit("print")
@@ -196,14 +199,61 @@ func (v *GeneratorVisitor) VisitBuiltinFuncNode(node *ASTBuiltinFuncNode) {
 	}
 }
 
+func (v *GeneratorVisitor) getExpressionType(node ASTNode) string {
+	switch node := node.(type) {
+	case *ASTIntegerNode:
+		return "int"
+	case *ASTFloatNode:
+		return "float"
+	case *ASTBooleanNode:
+		return "bool"
+	case *ASTColorNode:
+		return "colour"
+	case *ASTVariableNode:
+		item, _, _ := v.SymbolTable.Resolve(node.Token.Lexeme)
+		return item.Type
+	case *ASTArrayNode:
+		return node.Type
+	case *ASTFuncCallNode:
+		item, _, _ := v.SymbolTable.Resolve(node.Name)
+		return item.Type
+
+	case *ASTBinaryOpNode:
+		leftType := v.getExpressionType(node.Left)
+		return leftType
+	case *ASTUnaryOpNode:
+		return v.getExpressionType(node.Operand)
+	case *ASTTypeNode:
+		return node.Name
+	case *ASTTypeCastNode:
+		return node.Type
+	case *ASTReturnNode:
+		return v.getExpressionType(node.Expr)
+	case *ASTAssignmentNode:
+		return v.getExpressionType(node.Expr)
+	default:
+		panic(fmt.Sprintf("unknown node type: %T", node))
+	}
+	return ""
+}
+
 // Functions node
 func (v *GeneratorVisitor) VisitFuncDeclNode(node *ASTFuncDeclNode) {
+	v.SymbolTable.Define(node.Name, node.ReturnType)
 	// push frame
 	skipFunctionBodyIdx := v.emit("push TBD")
 	v.emit("jmp")
 	v.SymbolTable.PushFrame()
 	v.emit("." + node.Name)
-	v.emit(fmt.Sprintf("push %d", CountVarDecls(node.Block)))
+	paramCount := 0
+	for _, param := range node.Params.(*ASTFormalParamsNode).Params {
+		varDeclNode := param.(*ASTVarDeclNode)
+		count := varDeclNode.Type[strings.Index(varDeclNode.Type, "[")+1 : strings.LastIndex(varDeclNode.Type, "]")]
+		countInt, _ := strconv.Atoi(count)
+		paramCount += countInt
+
+	}
+	v.emit(fmt.Sprintf("push %d", CountVarDecls(node.Block)+paramCount))
 	v.emit("alloc")
 
 	// visit params
@@ -249,16 +299,47 @@ func (v *GeneratorVisitor) VisitFuncCallNode(node *ASTFuncCallNode) {
 	for i := len(params.Params) - 1; i >= 0; i-- {
 		params.Params[i].Accept(v)
 	}
-	v.emit("push " + fmt.Sprint(len(params.Params)))
+
+	v.emit("push " + fmt.Sprint(CountActualParams(params, v)))
 	v.emit("push ." + node.Name)
 	v.emit("call")
+}
+func CountActualParams(node *ASTActualParamsNode, v *GeneratorVisitor) int {
+	paramCount := 0
+	for _, param := range node.Params {
+		switch p := param.(type) {
+		case *ASTArrayNode:
+			paramCount += len(p.Type[strings.Index(p.Type, "[")+1 : strings.LastIndex(p.Type, "]")])
+		case *ASTFuncCallNode:
+			// Assuming the function return type is stored in the SymbolTable
+			item, _, _ := v.SymbolTable.Resolve(p.Name)
+			if strings.Contains(item.Type, "[") {
+				arraySize := item.Type[strings.Index(item.Type, "[")+1 : strings.LastIndex(item.Type, "]")]
+				size, _ := strconv.Atoi(arraySize)
+				paramCount += size
+			} else {
+				paramCount++
+			}
+		default:
+			paramCount++
+		}
+	}
+	return paramCount
 }
 
 func (v *GeneratorVisitor) VisitPrintNode(node *ASTPrintNode) {}
 
 func (v *GeneratorVisitor) VisitReturnNode(node *ASTReturnNode) {
+	Type := v.getExpressionType(node.Expr)
 	node.Expr.Accept(v)
-	v.emit("ret")
+	if strings.Contains(Type, "[") {
+		itemNumber := Type[strings.Index(Type, "[")+1 : strings.LastIndex(Type, "]")]
+		v.emit("push " + itemNumber)
+		v.emit("reta")
+	} else {
+		v.emit("ret")
+	}
+
 }
 
 /*
@@ -351,7 +432,14 @@ func (v *GeneratorVisitor) VisitVarDeclNode(node *ASTVarDeclNode) {
 	// store value
 	// val, _ := v.SymbolTable.Frames.Peek()
 	// item := FrameItem{Type: node.Type, Node: node, IndexInFrame: len(val), LevelInSoF: 0}
-	item := v.SymbolTable.Define(node.Name, node.Type)
+	var item SymbolGen
+	// if _, isArray := node.Expression.(*ASTArrayNode); isArray {
+	// 	// array declaration
+	// 	for i := len(node.Expression.(*ASTArrayNode).Items) - 1; i >= 0; i-- {
+	// 		item = v.SymbolTable.Define(node.Name+fmt.Sprintf("[%d]", i), node.Type)
+	// 	}
+	// }
+	item = v.SymbolTable.Define(node.Name, node.Type)
 	_, a, _ := v.SymbolTable.Resolve(node.Name)
 
 	// evaluate expression
@@ -379,8 +467,13 @@ func (v *GeneratorVisitor) VisitVariableNode(node *ASTVariableNode) {
 	item, level, _ := v.SymbolTable.Resolve(node.Token.Lexeme)
 
 	// array access must be handled differently
+	if _, isEpsilon := node.Offset.(*ASTEpsilon); !isEpsilon {
+		node.Offset.Accept(v)
+		v.emit(fmt.Sprintf("push +[%d:%d]", item.FrameIndex, level))
+		return
+	}
 
-	if strings.Index(item.Type, "[") != -1 {
+	if strings.Contains(item.Type, "[") {
 
 		v.emit("push " + item.Type[strings.Index(item.Type, "[")+1:strings.LastIndex(item.Type, "]")])
 		v.emit(fmt.Sprintf("pusha [%d:%d]", item.FrameIndex, level))
@@ -517,10 +610,12 @@ func CountVarDecls(node ASTNode) int {
 			count += CountVarDecls(stmt)
 		}
 		return count
-	case *ASTVarDeclNode:
+	case *ASTVarDeclNode: // sottile bug se lasci la possibilita di avere array con meno elementi di quelli dichiarati
 		if arr, ok := node.Expression.(*ASTArrayNode); ok {
 			return len(arr.Items)
 		}
+		return 1
+	case *ASTFuncDeclNode:
 		return 1
 	default:
 		return 0
