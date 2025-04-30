@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"strings"
 )
 
 type Scope map[string]ASTNode
@@ -149,6 +150,10 @@ func getExpressionType(node ASTNode, symbolTable SymbolTable) string {
 		n, _ = node.(*ASTTypeCastNode)
 
 		return n.Type
+	case *ASTArrayNode:
+		// Check if the array is declared
+		arrNode := node.(*ASTArrayNode)
+		return arrNode.Type
 	case *ASTEpsilon:
 		return ""
 	case *ASTBuiltinFuncNode:
@@ -468,4 +473,27 @@ func hasReturnStatement(node ASTNode, v *SemanticVisitor, expectedType string) b
 }
 
 func (v *SemanticVisitor) VisitSimpleExpressionNode(node *ASTSimpleExpression) {
+}
+
+func (v *SemanticVisitor) VisitArrayNode(node *ASTArrayNode) {
+	// Check if the array is already declared in the current scope
+	if node.Size < 0 {
+		panic("Array size must be greater than 0: " + fmt.Sprint(node.Size))
+	}
+	if node.Size < len(node.Items) {
+		panic("Array size must be greater than the number of items: " + fmt.Sprint(node.Size) + " < " + fmt.Sprint(len(node.Items)))
+	}
+
+	// Check if the types of the items match the array type
+	for _, item := range node.Items {
+		item.Accept(v)
+		itemType := getExpressionType(item, *v.SymbolTable)
+
+		if itemType != getArrayType(node) {
+			panic(fmt.Sprintf("Array item type mismatch: expected %v, got %v", getArrayType(node), itemType))
+		}
+	}
+}
+func getArrayType(node *ASTArrayNode) string {
+	return strings.Split(node.Type, "[")[0]
 }

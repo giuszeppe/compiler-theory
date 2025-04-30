@@ -273,3 +273,31 @@ func TestFunctionUsedAsOperandMismatchType(t *testing.T) {
 
 	expectPanic(t, func() { rootAST.Accept(visitor) }, "Type mismatch: expected int, got float")
 }
+
+func TestArrayWithInvalidSize(t *testing.T) {
+	program := `let x:int[5] = [1, 2, 3, 4, 5]; let y:int[3] = [1, 2, 3, 4];
+	`
+	parser := NewParser(program)
+	grammar := NewGrammar()
+	rootAST, err := parser.Parse(grammar)
+	if err != nil {
+		t.Fatalf("Failed to parse program: %v", err)
+	}
+	visitor := NewSemanticVisitor()
+
+	expectPanic(t, func() { rootAST.Accept(visitor) }, "Array size must be greater than the number of items: 3 < 4")
+}
+
+func TestArrayWithInvalidTypeElement(t *testing.T) {
+	program := `let x:int[5] = [1, 2, 3, 4, 5]; let y:int[3] = [1, 2, 3.0];
+	`
+	parser := NewParser(program)
+	grammar := NewGrammar()
+	rootAST, err := parser.Parse(grammar)
+	if err != nil {
+		t.Fatalf("Failed to parse program: %v", err)
+	}
+	visitor := NewSemanticVisitor()
+
+	expectPanic(t, func() { rootAST.Accept(visitor) }, "Array item type mismatch: expected int, got float")
+}

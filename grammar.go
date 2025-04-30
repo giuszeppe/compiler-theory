@@ -85,6 +85,7 @@ func NewGrammar() *Grammar {
 		Action: func(ch []ASTNode) ASTNode {
 			if arrNode, ok := ch[4].(*ASTArrayNode); ok {
 				ch[3].(*ASTTypeNode).Name += "[" + strconv.Itoa(arrNode.Size) + "]"
+				ch[4].(*ASTArrayNode).Type = ch[3].(*ASTTypeNode).Name
 			}
 			// if-else to match the VarDeclSuffix and behave differently if it's an array or a normal expression
 			return &ASTVarDeclNode{

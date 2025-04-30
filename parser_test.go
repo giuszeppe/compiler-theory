@@ -665,16 +665,18 @@ func TestParsingArrVarDecl(t *testing.T) {
 			&ASTVarDeclNode{
 				Name: "list_of_integers",
 				Type: "int[5]",
-				Expression: &ASTArrayNode{Items: []ASTNode{
-					&ASTIntegerNode{Value: 23},
-					&ASTIntegerNode{Value: 54},
-					&ASTIntegerNode{Value: 3},
-					&ASTIntegerNode{Value: 65},
-					&ASTIntegerNode{Value: 99},
-					&ASTIntegerNode{Value: 120},
-					&ASTIntegerNode{Value: 34},
-					&ASTIntegerNode{Value: 21},
-				}},
+				Expression: &ASTArrayNode{
+					Type: "int[5]",
+					Items: []ASTNode{
+						&ASTIntegerNode{Value: 23},
+						&ASTIntegerNode{Value: 54},
+						&ASTIntegerNode{Value: 3},
+						&ASTIntegerNode{Value: 65},
+						&ASTIntegerNode{Value: 99},
+						&ASTIntegerNode{Value: 120},
+						&ASTIntegerNode{Value: 34},
+						&ASTIntegerNode{Value: 21},
+					}},
 			},
 		}},
 	}
@@ -696,11 +698,13 @@ func TestParsingArrDeclarationWithoutArrSize(t *testing.T) {
 			&ASTVarDeclNode{
 				Name: "list_of_integers",
 				Type: "int[3]",
-				Expression: &ASTArrayNode{Items: []ASTNode{
-					&ASTIntegerNode{Value: 23},
-					&ASTIntegerNode{Value: 54},
-					&ASTIntegerNode{Value: 3},
-				}},
+				Expression: &ASTArrayNode{
+					Type: "int[3]",
+					Items: []ASTNode{
+						&ASTIntegerNode{Value: 23},
+						&ASTIntegerNode{Value: 54},
+						&ASTIntegerNode{Value: 3},
+					}},
 			},
 		}},
 	}
