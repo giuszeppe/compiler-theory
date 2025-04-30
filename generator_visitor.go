@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"strings"
 )
 
 type GenStack[T any] struct {
@@ -52,6 +53,7 @@ type GeneratorVisitor struct {
 type SymbolGen struct {
 	Name       string
 	FrameIndex int // index inside its own frame
+	Type       string
 }
 
 type Frame struct {
@@ -85,12 +87,13 @@ func (fs *FrameStack) PopFrame() {
 }
 
 // Define adds a symbol to the top frame
-func (fs *FrameStack) Define(name string) SymbolGen {
+func (fs *FrameStack) Define(name string, Type string) SymbolGen {
 	if fs.Frames.Size() == 0 {
 		panic("no frame to define symbol in")
 	}
 	frame, _ := fs.Frames.Peek()
 	sym := SymbolGen{
+		Type:       Type,
 		Name:       name,
 		FrameIndex: len(frame.Symbols), // number of symbols already in the frame
 	}
@@ -141,13 +144,7 @@ func (v *GeneratorVisitor) VisitBlockNode(node *ASTBlockNode) {
 func openFrameAndPopIfBlock(v *GeneratorVisitor, node ASTNode) {
 	// if node is a block, push and pop the frame
 	if blockNode, ok := node.(*ASTBlockNode); ok {
-		varCount := 0
-		for _, stmt := range blockNode.Stmts {
-			_, isVarDecl := stmt.(*ASTVarDeclNode)
-			if isVarDecl {
-				varCount++
-			}
-		}
+		varCount := CountVarDecls(blockNode)
 		v.emit(fmt.Sprintf("push %d", varCount))
 		v.emit("oframe")
 		node.Accept(v)
@@ -183,7 +180,13 @@ func (v *GeneratorVisitor) VisitBuiltinFuncNode(node *ASTBuiltinFuncNode) {
 		for i := len(node.Args) - 1; 0 <= i; i-- {
 			node.Args[i].Accept(v)
 		}
-		v.emit("print")
+		item, _, _ := v.SymbolTable.Resolve(node.Args[0].(*ASTVariableNode).Token.Lexeme)
+		if strings.Contains(item.Type, "[") {
+			v.emit("push " + item.Type[strings.Index(item.Type, "[")+1:strings.LastIndex(item.Type, "]")])
+			v.emit("printa")
+		} else {
+			v.emit("print")
+		}
 	case "__random_int":
 		node.Args[0].Accept(v)
 		v.emit("irnd")
@@ -217,7 +220,7 @@ func (v *GeneratorVisitor) VisitFuncDeclNode(node *ASTFuncDeclNode) {
 
 func (v *GeneratorVisitor) VisitFormalParamsNode(node *ASTFormalParamsNode) {
 	for _, param := range node.Params {
-		v.SymbolTable.Define(param.(*ASTVarDeclNode).Name)
+		v.SymbolTable.Define(param.(*ASTVarDeclNode).Name, param.(*ASTVarDeclNode).Type)
 	}
 }
 
@@ -348,14 +351,18 @@ func (v *GeneratorVisitor) VisitVarDeclNode(node *ASTVarDeclNode) {
 	// store value
 	// val, _ := v.SymbolTable.Frames.Peek()
 	// item := FrameItem{Type: node.Type, Node: node, IndexInFrame: len(val), LevelInSoF: 0}
-	item := v.SymbolTable.Define(node.Name)
+	item := v.SymbolTable.Define(node.Name, node.Type)
 	_, a, _ := v.SymbolTable.Resolve(node.Name)
 
 	// evaluate expression
 	node.Expression.Accept(v)
 	v.emit(fmt.Sprintf("push %d", item.FrameIndex))
 	v.emit(fmt.Sprintf("push %d", a))
-	v.emit("st")
+	if _, isArray := node.Expression.(*ASTArrayNode); isArray {
+		v.emit("sta")
+	} else {
+		v.emit("st")
+	}
 }
 func (v *GeneratorVisitor) VisitAssignmentNode(node *ASTAssignmentNode) {
 	// evaluate RHS
@@ -370,6 +377,15 @@ func (v *GeneratorVisitor) VisitAssignmentNode(node *ASTAssignmentNode) {
 // ===== Variables =====
 func (v *GeneratorVisitor) VisitVariableNode(node *ASTVariableNode) {
 	item, level, _ := v.SymbolTable.Resolve(node.Token.Lexeme)
+
+	// array access must be handled differently
+
+	if strings.Index(item.Type, "[") != -1 {
+
+		v.emit("push " + item.Type[strings.Index(item.Type, "[")+1:strings.LastIndex(item.Type, "]")])
+		v.emit(fmt.Sprintf("pusha [%d:%d]", item.FrameIndex, level))
+		return
+	}
 	v.emit(fmt.Sprintf("push [%d:%d]", item.FrameIndex, level))
 }
 
@@ -486,6 +502,13 @@ func (v *GeneratorVisitor) VisitTypeCastNode(node *ASTTypeCastNode) {
 
 func (v *GeneratorVisitor) VisitEpsilon(node *ASTEpsilon) {}
 
+func (v *GeneratorVisitor) VisitArrayNode(node *ASTArrayNode) {
+	for i := len(node.Items) - 1; i >= 0; i-- {
+		node.Items[i].Accept(v)
+	}
+	v.emit("push " + fmt.Sprint(len(node.Items)))
+}
+
 func CountVarDecls(node ASTNode) int {
 	switch node := node.(type) {
 	case *ASTBlockNode:
@@ -495,6 +518,9 @@ func CountVarDecls(node ASTNode) int {
 		}
 		return count
 	case *ASTVarDeclNode:
+		if arr, ok := node.Expression.(*ASTArrayNode); ok {
+			return len(arr.Items)
+		}
 		return 1
 	default:
 		return 0
