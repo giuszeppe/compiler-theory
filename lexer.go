@@ -106,6 +106,10 @@ func (t TokenType) String() string {
 		return "PadRandI"
 	case ClearToken:
 		return "Clear"
+	case RightBracketToken:
+		return "RightBracket"
+	case LeftBracketToken:
+		return "LeftBracket"
 	default:
 		return "Unknown"
 	}
@@ -135,6 +139,8 @@ const (
 
 	RightCurlyToken
 	LeftCurlyToken
+	RightBracketToken
+	LeftBracketToken
 
 	RelOpToken
 	CommaToken
@@ -203,6 +209,8 @@ const (
 	Comma
 	Hash
 	Dot
+	RightBracket
+	LeftBracket
 	Newline
 	LexemeCount // total count of lexeme types
 )
@@ -229,6 +237,9 @@ const (
 	StateComma
 	StateHex
 	StateFloat
+	StateArrayType
+	StateLeftBracket
+	StateRightBracket
 
 	StateMultilineCommentOpen
 	StateMultilineAlmostClosed
@@ -265,6 +276,8 @@ var finalStateToTokenType = map[int]TokenType{
 	StateMultilineClosed:       CommentMultiLine,
 	StateMultilineAlmostClosed: CommentMultiLine,
 	StateMultilineCommentOpen:  CommentMultiLine,
+	StateLeftBracket:           LeftBracketToken,
+	StateRightBracket:          RightBracketToken,
 }
 var charCategoryMap = map[byte]string{
 	'_':  "_",
@@ -288,6 +301,8 @@ var charCategoryMap = map[byte]string{
 	',':  "comma",
 	'#':  "hash",
 	'.':  "dot",
+	'[':  "leftBracket",
+	']':  "rightBracket",
 }
 
 func NewToken(t TokenType, lexeme string) Token {
@@ -306,28 +321,30 @@ type Lexer struct {
 func NewLexer() Lexer {
 	lexer := Lexer{
 		LexemeMap: map[string]int{
-			"_":         Underscore,
-			"letter":    Letter,
-			"digit":     Digit,
-			"ws":        Whitespace,
-			"eq":        Equals,
-			"sc":        Semicolon,
-			"lp":        LeftParen,
-			"rp":        RightParen,
-			"plus":      Plus,
-			"minus":     Minus,
-			"slash":     Slash,
-			"star":      Star,
-			"other":     Other,
-			"colon":     Colon,
-			"leftArrow": LeftArrow,
-			"lc":        LeftCurly,
-			"rc":        RightCurly,
-			"relop":     RelOp,
-			"comma":     Comma,
-			"hash":      Hash,
-			"dot":       Dot,
-			"nl":        Newline,
+			"_":            Underscore,
+			"letter":       Letter,
+			"digit":        Digit,
+			"ws":           Whitespace,
+			"eq":           Equals,
+			"sc":           Semicolon,
+			"lp":           LeftParen,
+			"rp":           RightParen,
+			"plus":         Plus,
+			"minus":        Minus,
+			"slash":        Slash,
+			"star":         Star,
+			"other":        Other,
+			"colon":        Colon,
+			"leftArrow":    LeftArrow,
+			"lc":           LeftCurly,
+			"rc":           RightCurly,
+			"relop":        RelOp,
+			"comma":        Comma,
+			"hash":         Hash,
+			"dot":          Dot,
+			"nl":           Newline,
+			"leftBracket":  LeftBracket,
+			"rightBracket": RightBracket,
 		},
 
 		StateList: make([]int, StateCount),
@@ -356,6 +373,9 @@ func NewLexer() Lexer {
 			StateMultilineAlmostClosed,
 			StateMultilineClosed,
 			StateNewline,
+			StateArrayType,
+			StateLeftBracket,
+			StateRightBracket,
 		},
 	}
 	lexer.Rows = StateCount
@@ -423,6 +443,9 @@ func (l *Lexer) initialiseTable() {
 	l.Tx[StateSlash][Slash] = StateSinglelineComment
 
 	l.Tx[StateStart][Newline] = StateNewline
+
+	l.Tx[StateStart][LeftBracket] = StateLeftBracket
+	l.Tx[StateStart][RightBracket] = StateRightBracket
 
 	for idx := 0; idx < int(LexemeCount); idx++ {
 		if idx != Newline {
@@ -524,6 +547,21 @@ func (l *Lexer) getTokenTypeByFinalState(state int, lexeme string) Token {
 			return tok
 		}
 		return Token{Identifier, lexeme}
+
+	// case StateArrayType:
+	// 	if strings.HasPrefix(lexeme, "int") {
+	// 		return Token{IntType, lexeme}
+	// 	}
+	// 	if strings.HasPrefix(lexeme, "bool") {
+	// 		return Token{BoolType, lexeme}
+	// 	}
+	// 	if strings.HasPrefix(lexeme, "float") {
+	// 		return Token{FloatType, lexeme}
+	// 	}
+	// 	if strings.HasPrefix(lexeme, "color") {
+	// 		return Token{ColourType, lexeme}
+	// 	}
+	// 	return Token{Error, lexeme}
 
 	case StateRelOpExtended:
 		if lexeme == "->" {

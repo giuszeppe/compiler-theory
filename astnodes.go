@@ -34,6 +34,7 @@ type ASTVisitor interface {
 	VisitBooleanNode(node *ASTBooleanNode)
 	VisitColorNode(node *ASTColorNode)
 	VisitReturnNode(node *ASTReturnNode)
+	VisitArrayNode(node *ASTArrayNode)
 }
 
 // ==== AST Node Interface ====
@@ -311,4 +312,15 @@ type ASTReturnNode struct {
 func (n *ASTReturnNode) Accept(visitor ASTVisitor) {
 	// Implement the Accept method for ASTReturnNode
 	visitor.VisitReturnNode(n)
+}
+
+type ASTArrayNode struct {
+	Type  string
+	Items []ASTNode
+	Size  int
+}
+
+func (n *ASTArrayNode) Accept(visitor ASTVisitor) {
+	// Implement the Accept method for ASTArrayNode
+	visitor.VisitArrayNode(n)
 }

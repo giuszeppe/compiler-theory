@@ -81,15 +81,146 @@ func NewGrammar() *Grammar {
 	// — Statement → VariableDecl ';'
 	g.Rules = append(g.Rules, Rule{
 		LHS: "Statement",
-		RHS: []Symbol{Let, Identifier, ColonToken, "TypeRule", EqualsToken, "Expr", SemicolonToken},
+		RHS: []Symbol{Let, Identifier, ColonToken, "TypeRule", "VarDeclSuffix", SemicolonToken},
 		Action: func(ch []ASTNode) ASTNode {
+			if arrNode, ok := ch[4].(*ASTArrayNode); ok {
+				ch[3].(*ASTTypeNode).Name += "[" + strconv.Itoa(arrNode.Size) + "]"
+			}
+			// if-else to match the VarDeclSuffix and behave differently if it's an array or a normal expression
 			return &ASTVarDeclNode{
 				Name:       ch[1].(*ASTSimpleExpression).Token.Lexeme,
 				Type:       ch[3].(*ASTTypeNode).Name,
-				Expression: ch[5],
+				Expression: ch[4],
 			}
 		},
 	})
+
+	// — VarDeclSuffix →  '=' Expr
+	g.Rules = append(g.Rules, Rule{
+		LHS: "VarDeclSuffix",
+		RHS: []Symbol{EqualsToken, "Expr"},
+		Action: func(ch []ASTNode) ASTNode {
+			return ch[1]
+		},
+	})
+
+	// - VarDeclSuffix → '[' VarDeclArray
+	g.Rules = append(g.Rules, Rule{
+		LHS: "VarDeclSuffix",
+		RHS: []Symbol{LeftBracketToken, "VarDeclArray"},
+		Action: func(ch []ASTNode) ASTNode {
+			// ch[0] is a left bracket, ch[1] is *ASTVarDeclArrayNode
+			return ch[1]
+		},
+	})
+
+	// - VarDeclArray → Integer ']' = '[' Literal VarDeclArrayTail ]'
+	g.Rules = append(g.Rules, Rule{
+		LHS: "VarDeclArray",
+		RHS: []Symbol{Integer, RightBracketToken, EqualsToken, LeftBracketToken, "Literal", "VarDeclArrayTail"},
+		Action: func(ch []ASTNode) ASTNode {
+			arrayNode := ch[5].(*ASTArrayNode)
+			arraySize := ch[0].(*ASTSimpleExpression).Token.Lexeme
+			v, _ := strconv.Atoi(arraySize)
+			arrayNode.Size = v
+			arrayNode.Items = append([]ASTNode{ch[4]}, arrayNode.Items...)
+			return arrayNode
+		},
+	})
+
+	// - VarDeclArrayTail → ',' Literal VarDeclArrayTail
+	g.Rules = append(g.Rules, Rule{
+		LHS: "VarDeclArrayTail",
+		RHS: []Symbol{CommaToken, "Literal", "VarDeclArrayTail"},
+		Action: func(ch []ASTNode) ASTNode {
+			return &ASTArrayNode{
+				Size:  ch[2].(*ASTArrayNode).Size + 1,
+				Items: append([]ASTNode{ch[1]}, ch[2].(*ASTArrayNode).Items...),
+			}
+		},
+	})
+	// - VarDeclArrayTail → epsilon
+	g.Rules = append(g.Rules, Rule{
+		LHS: "VarDeclArrayTail",
+		RHS: []Symbol{RightBracketToken},
+		Action: func(ch []ASTNode) ASTNode {
+			return &ASTArrayNode{
+				Items: []ASTNode{},
+			}
+		},
+	})
+
+	// - VarDeclArray →  ']' = '[' Literal VarDeclArrayTail ']'
+	g.Rules = append(g.Rules, Rule{
+		LHS: "VarDeclArray",
+		RHS: []Symbol{RightBracketToken, EqualsToken, LeftBracketToken, "Literal", "VarDeclArrayTail"},
+		Action: func(ch []ASTNode) ASTNode {
+			arrayNode := ch[4].(*ASTArrayNode)
+			arrayNode.Size = arrayNode.Size + 1
+			arrayNode.Items = append([]ASTNode{ch[3]}, arrayNode.Items...)
+			return arrayNode
+		},
+	})
+
+	// - Literal → IntegerLiteral
+	g.Rules = append(g.Rules, Rule{
+		LHS: "Literal",
+		RHS: []Symbol{Integer},
+		Action: func(ch []ASTNode) ASTNode {
+			tok := ch[0].(*ASTSimpleExpression).Token
+			v, _ := strconv.Atoi(tok.Lexeme)
+			return &ASTIntegerNode{Name: tok.Lexeme, Value: v}
+		},
+	})
+
+	// - Literal → FloatLiteral
+	g.Rules = append(g.Rules, Rule{
+		LHS: "Literal",
+		RHS: []Symbol{Float},
+		Action: func(ch []ASTNode) ASTNode {
+			tok := ch[0].(*ASTSimpleExpression).Token
+			v, _ := strconv.ParseFloat(tok.Lexeme, 64)
+			return &ASTFloatNode{Name: tok.Lexeme, Value: v}
+		},
+	})
+
+	// - Literal → True
+	g.Rules = append(g.Rules, Rule{
+		LHS: "Literal",
+		RHS: []Symbol{True},
+		Action: func(ch []ASTNode) ASTNode {
+			return &ASTBooleanNode{Value: true}
+		},
+	})
+
+	// - Literal → False
+	g.Rules = append(g.Rules, Rule{
+		LHS: "Literal",
+		RHS: []Symbol{False},
+		Action: func(ch []ASTNode) ASTNode {
+			return &ASTBooleanNode{Value: false}
+		},
+	})
+
+	// - Literal → Color
+	g.Rules = append(g.Rules, Rule{
+		LHS: "Literal",
+		RHS: []Symbol{HexNumber},
+		Action: func(ch []ASTNode) ASTNode {
+			return &ASTColorNode{
+				Value: ch[0].(*ASTSimpleExpression).Token.Lexeme,
+			}
+		},
+	})
+
+	// - VarDeclArray → ']' | ',' Expr VarDeclArray
+	// g.Rules = append(g.Rules, Rule{
+	// 	LHS: "VarDeclArray",
+	// 	RHS: []Symbol{RightBracketToken},
+	// 	Action: func(ch []ASTNode) ASTNode {
+	// 		return &ASTEpsilon{}
+	// 	},
+	// })
 
 	// — TypeRule → 'float' | 'int' | 'color' | 'bool' |
 	g.Rules = append(g.Rules, Rule{

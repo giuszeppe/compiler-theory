@@ -139,7 +139,19 @@ func assertASTNodeEqual(t *testing.T, expected, actual ASTNode) {
 		if e.Value != a.Value {
 			t.Fatalf("AST color values are not equal: expected %s, got %s", e.Value, a.Value)
 		}
+	case *ASTArrayNode:
+		a := actual.(*ASTArrayNode)
+		if len(e.Items) != len(a.Items) {
+			t.Fatalf("AST array elements length mismatch: expected %d, got %d", len(e.Items), len(a.Items))
+		}
 
+		for i := range e.Items {
+			assertASTNodeEqual(t, e.Items[i], a.Items[i])
+		}
+
+		if e.Type != a.Type {
+			t.Fatalf("AST array types are not equal: expected %s, got %s", e.Type, a.Type)
+		}
 	default:
 		t.Fatalf("Unsupported AST node type: %T", expected)
 	}
@@ -637,4 +649,61 @@ func TestParsingEmptyProgram(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Expected parsing to succeed for empty program, but it failed: %v", err)
 	}
+}
+
+func TestParsingArrVarDecl(t *testing.T) {
+	program := "let list_of_integers:int[5] = [23, 54, 3, 65, 99, 120, 34, 21];"
+	parser := NewParser(program)
+	grammar := NewGrammar()
+	node, err := parser.Parse(grammar)
+	if err != nil {
+		t.Fatalf("Failed to parse program: %v", err)
+	}
+
+	expectedAST := &ASTProgramNode{
+		Block: ASTBlockNode{Stmts: []ASTNode{
+			&ASTVarDeclNode{
+				Name: "list_of_integers",
+				Type: "int[5]",
+				Expression: &ASTArrayNode{Items: []ASTNode{
+					&ASTIntegerNode{Value: 23},
+					&ASTIntegerNode{Value: 54},
+					&ASTIntegerNode{Value: 3},
+					&ASTIntegerNode{Value: 65},
+					&ASTIntegerNode{Value: 99},
+					&ASTIntegerNode{Value: 120},
+					&ASTIntegerNode{Value: 34},
+					&ASTIntegerNode{Value: 21},
+				}},
+			},
+		}},
+	}
+
+	assertASTNodeEqual(t, expectedAST, node)
+}
+
+func TestParsingArrDeclarationWithoutArrSize(t *testing.T) {
+	program := "let list_of_integers:int[] = [23, 54, 3];"
+	parser := NewParser(program)
+	grammar := NewGrammar()
+	node, err := parser.Parse(grammar)
+	if err != nil {
+		t.Fatalf("Failed to parse program: %v", err)
+	}
+
+	expectedAST := &ASTProgramNode{
+		Block: ASTBlockNode{Stmts: []ASTNode{
+			&ASTVarDeclNode{
+				Name: "list_of_integers",
+				Type: "int[3]",
+				Expression: &ASTArrayNode{Items: []ASTNode{
+					&ASTIntegerNode{Value: 23},
+					&ASTIntegerNode{Value: 54},
+					&ASTIntegerNode{Value: 3},
+				}},
+			},
+		}},
+	}
+
+	assertASTNodeEqual(t, expectedAST, node)
 }

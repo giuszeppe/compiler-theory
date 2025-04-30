@@ -77,6 +77,8 @@ func TestAllTokenTypes(t *testing.T) {
             `, Token{CommentMultiLine, `/* comment and dw
             ez ez ez
             `}},
+		{"[", Token{LeftBracketToken, "["}},
+		{"]", Token{RightBracketToken, "]"}},
 	}
 
 	for _, test := range tests {

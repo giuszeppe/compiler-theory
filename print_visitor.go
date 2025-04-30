@@ -260,3 +260,13 @@ func (v *PrintNodesVisitor) VisitBooleanNode(node *ASTBooleanNode) {
 	v.NodeCount++
 	fmt.Println(strings.Repeat("\t", v.TabCount), "Boolean value::", node.Value)
 }
+
+func (v *PrintNodesVisitor) VisitArrayNode(node *ASTArrayNode) {
+	v.NodeCount++
+	fmt.Println(strings.Repeat("\t", v.TabCount), "Array node =>")
+	v.IncTabCount()
+	for _, item := range node.Items {
+		item.Accept(v)
+	}
+	v.DecTabCount()
+}
