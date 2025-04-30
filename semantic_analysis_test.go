@@ -301,3 +301,17 @@ func TestArrayWithInvalidTypeElement(t *testing.T) {
 
 	expectPanic(t, func() { rootAST.Accept(visitor) }, "Array item type mismatch: expected int, got float")
 }
+
+func TestArrayAccessWithInvalidType(t *testing.T) {
+	program := `let x:int[5] = [1, 2, 3, 4, 5]; let y:int = x[1.0];
+	`
+	parser := NewParser(program)
+	grammar := NewGrammar()
+	rootAST, err := parser.Parse(grammar)
+	if err != nil {
+		t.Fatalf("Failed to parse program: %v", err)
+	}
+	visitor := NewSemanticVisitor()
+
+	expectPanic(t, func() { rootAST.Accept(visitor) }, "Invalid offset type: expected int, got float")
+}

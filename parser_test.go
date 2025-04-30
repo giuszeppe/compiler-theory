@@ -711,3 +711,75 @@ func TestParsingArrDeclarationWithoutArrSize(t *testing.T) {
 
 	assertASTNodeEqual(t, expectedAST, node)
 }
+
+func TestParsingArrayOffsetAccessAsFactor(t *testing.T) {
+	program := "a = arr[1];"
+	parser := NewParser(program)
+	grammar := NewGrammar()
+	node, err := parser.Parse(grammar)
+	if err != nil {
+		t.Fatalf("Failed to parse program: %v", err)
+	}
+
+	expectedAST := &ASTProgramNode{
+		Block: ASTBlockNode{Stmts: []ASTNode{
+			&ASTAssignmentNode{
+				Id: ASTVariableNode{Token: Token{Type: Identifier, Lexeme: "a"}},
+				Expr: &ASTVariableNode{
+					Token:  Token{Type: Identifier, Lexeme: "arr"},
+					Offset: &ASTIntegerNode{Value: 3},
+				},
+			},
+		}},
+	}
+
+	assertASTNodeEqual(t, expectedAST, node)
+}
+
+func TestParsingArrayAccessAssignment(t *testing.T) {
+	program := "arr[1] = 5;"
+	parser := NewParser(program)
+	grammar := NewGrammar()
+	node, err := parser.Parse(grammar)
+	if err != nil {
+		t.Fatalf("Failed to parse program: %v", err)
+	}
+
+	expectedAST := &ASTProgramNode{
+		Block: ASTBlockNode{Stmts: []ASTNode{
+			&ASTAssignmentNode{
+				Id: ASTVariableNode{
+					Token:  Token{Type: Identifier, Lexeme: "arr"},
+					Offset: &ASTIntegerNode{Value: 1},
+				},
+				Expr: &ASTIntegerNode{Value: 5},
+			},
+		}},
+	}
+
+	assertASTNodeEqual(t, expectedAST, node)
+}
+
+func TestParsingArrayAccessAssignmentVariable(t *testing.T) {
+	program := "arr[x] = 5;"
+	parser := NewParser(program)
+	grammar := NewGrammar()
+	node, err := parser.Parse(grammar)
+	if err != nil {
+		t.Fatalf("Failed to parse program: %v", err)
+	}
+
+	expectedAST := &ASTProgramNode{
+		Block: ASTBlockNode{Stmts: []ASTNode{
+			&ASTAssignmentNode{
+				Id: ASTVariableNode{
+					Token:  Token{Type: Identifier, Lexeme: "arr"},
+					Offset: &ASTVariableNode{Token: Token{Type: Identifier, Lexeme: "x"}},
+				},
+				Expr: &ASTIntegerNode{Value: 5},
+			},
+		}},
+	}
+
+	assertASTNodeEqual(t, expectedAST, node)
+}

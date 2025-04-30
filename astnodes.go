@@ -63,7 +63,8 @@ func (n *ASTIntegerNode) Accept(visitor ASTVisitor) {
 }
 
 type ASTVariableNode struct {
-	Token Token
+	Token  Token
+	Offset ASTNode
 }
 
 func (n *ASTVariableNode) Accept(visitor ASTVisitor) {

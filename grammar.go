@@ -67,17 +67,45 @@ func NewGrammar() *Grammar {
 	// — Statement → Assignment ';'
 	g.Rules = append(g.Rules, Rule{
 		LHS: "Statement",
-		RHS: []Symbol{Identifier, EqualsToken, "Expr", SemicolonToken},
+		RHS: []Symbol{"Identifier", EqualsToken, "Expr", SemicolonToken},
 		Action: func(ch []ASTNode) ASTNode {
 			// ch[0] and ch[1] were terminals; ch[2] is *ASTExpressionNode
-			varTok := ch[0].(*ASTSimpleExpression).Token
 			exprN := ch[2]
+			varNode, _ := ch[0].(*ASTVariableNode)
 			return &ASTAssignmentNode{
-				Id:   ASTVariableNode{Token: varTok},
+				Id:   *varNode,
 				Expr: exprN,
 			}
 		},
 	})
+
+	g.Rules = append(g.Rules, Rule{
+		LHS: "Identifier",
+		RHS: []Symbol{Identifier, "IdentifierOrArrayAccess"},
+		Action: func(ch []ASTNode) ASTNode {
+			return &ASTVariableNode{
+				Token:  ch[0].(*ASTSimpleExpression).Token,
+				Offset: ch[1],
+			}
+		},
+	})
+
+	g.Rules = append(g.Rules, Rule{
+		LHS: "IdentifierOrArrayAccess",
+		RHS: []Symbol{LeftBracketToken, "Expr", RightBracketToken},
+		Action: func(ch []ASTNode) ASTNode {
+			return ch[1]
+		},
+	})
+
+	g.Rules = append(g.Rules, Rule{
+		LHS: "IdentifierOrArrayAccess",
+		RHS: []Symbol{},
+		Action: func(ch []ASTNode) ASTNode {
+			return &ASTEpsilon{}
+		},
+	})
+
 	// — Statement → VariableDecl ';'
 	g.Rules = append(g.Rules, Rule{
 		LHS: "Statement",
@@ -863,13 +891,22 @@ func NewGrammar() *Grammar {
 		LHS: "Factor",
 		RHS: []Symbol{Identifier, "IdentifierOrFunctionCall"},
 		Action: func(ch []ASTNode) ASTNode {
-			_, isEpsilon := ch[1].(*ASTEpsilon)
-			if isEpsilon {
-				return &ASTVariableNode{Token: ch[0].(*ASTSimpleExpression).Token}
+			_, isFuncCall := ch[1].(*ASTFuncCallNode)
+			if isFuncCall {
+				funcCall := ch[1].(*ASTFuncCallNode)
+				funcCall.Name = ch[0].(*ASTSimpleExpression).Token.Lexeme
+				return funcCall
 			}
-			funcCall := ch[1].(*ASTFuncCallNode)
-			funcCall.Name = ch[0].(*ASTSimpleExpression).Token.Lexeme
-			return funcCall
+			return &ASTVariableNode{Token: ch[0].(*ASTSimpleExpression).Token, Offset: ch[1]}
+		},
+	})
+
+	// — IdentifierOrFunctionCall → [ Expr ]
+	g.Rules = append(g.Rules, Rule{
+		LHS: "IdentifierOrFunctionCall",
+		RHS: []Symbol{LeftBracketToken, "Expr", RightBracketToken},
+		Action: func(ch []ASTNode) ASTNode {
+			return ch[1]
 		},
 	})
 	// — IdentifierOrFunctionCall → ε

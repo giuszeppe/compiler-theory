@@ -70,6 +70,12 @@ func (v *SemanticVisitor) VisitVariableNode(node *ASTVariableNode) {
 	if !ok {
 		panic("Variable not declared: " + node.Token.Lexeme)
 	}
+	if _, isEpsilon := node.Offset.(*ASTEpsilon); !isEpsilon {
+		offsetType := getExpressionType(node.Offset, *v.SymbolTable)
+		if offsetType != "int" {
+			panic("Invalid offset type: expected int, got " + offsetType)
+		}
+	}
 
 }
 
@@ -97,6 +103,11 @@ func getExpressionType(node ASTNode, symbolTable SymbolTable) string {
 		if !ok {
 			panic("Not a variable declaration: ")
 		}
+		if _, isEpsilon := variableNode.Offset.(*ASTEpsilon); !isEpsilon {
+			itemType := varDeclNode.Type[:strings.Index(varDeclNode.Type, "[")]
+			return itemType
+		}
+
 		return varDeclNode.Type
 
 	case *ASTBinaryOpNode:
@@ -261,11 +272,22 @@ func (v *SemanticVisitor) VisitAssignmentNode(node *ASTAssignmentNode) {
 		panic("Not a variable declaration: " + node.Id.Token.Lexeme)
 	}
 
-	// Check if the type of the expression matches the variable type
-	if getExpressionType(node.Expr, *v.SymbolTable) != varDeclNode.Type {
-		panic(fmt.Sprintf("Type mismatch: expected %v, got %v", varDeclNode.Type, getExpressionType(node.Expr, *v.SymbolTable)))
-	}
+	if _, isEpsilon := node.Id.Offset.(*ASTEpsilon); !isEpsilon {
+		offsetType := getExpressionType(node.Id.Offset, *v.SymbolTable)
+		if offsetType != "int" {
+			panic("Invalid offset type: expected int, got " + offsetType)
+		}
 
+		if getExpressionType(node.Expr, *v.SymbolTable) != varDeclNode.Type[:strings.Index(varDeclNode.Type, "[")] {
+			panic(fmt.Sprintf("Type mismatch: expected %v, got %v", varDeclNode.Type[:strings.Index(varDeclNode.Type, "[")], getExpressionType(node.Expr, *v.SymbolTable)))
+		}
+	} else {
+		// Check if the type of the expression matches the variable type
+		if getExpressionType(node.Expr, *v.SymbolTable) != varDeclNode.Type {
+			panic(fmt.Sprintf("Type mismatch: expected %v, got %v", varDeclNode.Type, getExpressionType(node.Expr, *v.SymbolTable)))
+		}
+
+	}
 	node.Expr.Accept(v)
 }
 
