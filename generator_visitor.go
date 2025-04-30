@@ -248,9 +248,13 @@ func (v *GeneratorVisitor) VisitFuncDeclNode(node *ASTFuncDeclNode) {
 	paramCount := 0
 	for _, param := range node.Params.(*ASTFormalParamsNode).Params {
 		varDeclNode := param.(*ASTVarDeclNode)
-		count := varDeclNode.Type[strings.Index(varDeclNode.Type, "[")+1 : strings.LastIndex(varDeclNode.Type, "]")]
-		countInt, _ := strconv.Atoi(count)
-		paramCount += countInt
+		if strings.Contains(varDeclNode.Type, "[") {
+			count := varDeclNode.Type[strings.Index(varDeclNode.Type, "[")+1 : strings.LastIndex(varDeclNode.Type, "]")]
+			countInt, _ := strconv.Atoi(count)
+			paramCount += countInt
+		} else {
+			paramCount++
+		}
 
 	}
 	v.emit(fmt.Sprintf("push %d", CountVarDecls(node.Block)+paramCount))
@@ -300,8 +304,8 @@ func (v *GeneratorVisitor) VisitFuncCallNode(node *ASTFuncCallNode) {
 		params.Params[i].Accept(v)
 	}
 
-	v.emit("push " + fmt.Sprint(CountActualParams(params, v)))
-	v.emit("push ." + node.Name)
+	v.emit("push " + fmt.Sprint(CountActualParams(params, v))) // param count
+	v.emit("push ." + node.Name)                               // function name
 	v.emit("call")
 }
 func CountActualParams(node *ASTActualParamsNode, v *GeneratorVisitor) int {
@@ -313,6 +317,15 @@ func CountActualParams(node *ASTActualParamsNode, v *GeneratorVisitor) int {
 		case *ASTFuncCallNode:
 			// Assuming the function return type is stored in the SymbolTable
 			item, _, _ := v.SymbolTable.Resolve(p.Name)
+			if strings.Contains(item.Type, "[") {
+				arraySize := item.Type[strings.Index(item.Type, "[")+1 : strings.LastIndex(item.Type, "]")]
+				size, _ := strconv.Atoi(arraySize)
+				paramCount += size
+			} else {
+				paramCount++
+			}
+		case *ASTVariableNode:
+			item, _, _ := v.SymbolTable.Resolve(p.Token.Lexeme)
 			if strings.Contains(item.Type, "[") {
 				arraySize := item.Type[strings.Index(item.Type, "[")+1 : strings.LastIndex(item.Type, "]")]
 				size, _ := strconv.Atoi(arraySize)

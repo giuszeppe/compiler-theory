@@ -524,7 +524,7 @@ func getKeywordTokenByLexeme(lexeme string) (Token, bool) {
 
 func getTypeTokenByLexeme(lexeme string) (Token, bool) {
 	switch lexeme {
-	case "color":
+	case "colour":
 		return Token{ColourType, lexeme}, true
 	case "int":
 		return Token{IntType, lexeme}, true
@@ -558,7 +558,7 @@ func (l *Lexer) getTokenTypeByFinalState(state int, lexeme string) Token {
 	// 	if strings.HasPrefix(lexeme, "float") {
 	// 		return Token{FloatType, lexeme}
 	// 	}
-	// 	if strings.HasPrefix(lexeme, "color") {
+	// 	if strings.HasPrefix(lexeme, "colour") {
 	// 		return Token{ColourType, lexeme}
 	// 	}
 	// 	return Token{Error, lexeme}
