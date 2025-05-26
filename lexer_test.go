@@ -66,7 +66,7 @@ func TestAllTokenTypes(t *testing.T) {
 		{"int", Token{IntType, "int"}},
 		{"float", Token{FloatType, "float"}},
 		{"bool", Token{BoolType, "bool"}},
-		{"color", Token{ColourType, "color"}},
+		{"colour", Token{ColourType, "colour"}},
 
 		{"//comment and dw", Token{CommentSingleLine, "//comment and dw"}},
 		{"/* comment and dw */", Token{CommentMultiLine, "/* comment and dw */"}},
