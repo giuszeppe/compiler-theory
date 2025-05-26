@@ -193,6 +193,11 @@ func (v *GeneratorVisitor) VisitBuiltinFuncNode(node *ASTBuiltinFuncNode) {
 	case "__random_int":
 		node.Args[0].Accept(v)
 		v.emit("irnd")
+	case "__read":
+		fmt.Println(node.Args[1])
+		node.Args[1].Accept(v)
+		node.Args[0].Accept(v)
+		v.emit("read")
 	case "__clear":
 		node.Args[0].Accept(v)
 		v.emit("clear")
@@ -231,6 +236,13 @@ func (v *GeneratorVisitor) getExpressionType(node ASTNode) string {
 		return v.getExpressionType(node.Expr)
 	case *ASTAssignmentNode:
 		return v.getExpressionType(node.Expr)
+	case *ASTBuiltinFuncNode:
+		switch node.Name {
+		case "__width", "__height":
+			return "int"
+		case "__read":
+			return "colour"
+		}
 	default:
 		panic(fmt.Sprintf("unknown node type: %T", node))
 	}

@@ -905,7 +905,7 @@ func NewGrammar() *Grammar {
 		Action: func(ch []ASTNode) ASTNode {
 			return &ASTBuiltinFuncNode{
 				Name: "__read",
-				Args: []ASTNode{ch[1], ch[3]},
+				Args: []ASTNode{ch[2], ch[4]},
 			}
 		},
 	})
