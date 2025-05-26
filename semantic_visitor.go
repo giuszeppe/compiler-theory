@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"strings"
 )
 
@@ -65,18 +66,18 @@ func NewSemanticVisitor() *SemanticVisitor {
 func (v *SemanticVisitor) VisitIntegerNode(node *ASTIntegerNode) {
 	// Do nothing
 }
+
 func (v *SemanticVisitor) VisitVariableNode(node *ASTVariableNode) {
 	_, ok := v.SymbolTable.Lookup(node.Token.Lexeme)
 	if !ok {
-		panic("Variable not declared: " + node.Token.Lexeme)
+		panic(ErrVariableNotDeclared(node.Token.Lexeme))
 	}
 	if _, isEpsilon := node.Offset.(*ASTEpsilon); !isEpsilon {
 		offsetType := getExpressionType(node.Offset, *v.SymbolTable)
 		if offsetType != "int" {
-			panic("Invalid offset type: expected int, got " + offsetType)
+			panic(ErrInvalidOffsetType("int", offsetType))
 		}
 	}
-
 }
 
 func getExpressionType(node ASTNode, symbolTable SymbolTable) string {
@@ -92,29 +93,26 @@ func getExpressionType(node ASTNode, symbolTable SymbolTable) string {
 	case *ASTVariableNode:
 		variableNode, ok := node.(*ASTVariableNode)
 		if !ok {
-			panic("Not a variable node: ")
+			panic(ErrUnknownExpressionType(node))
 		}
-		// Check if the variable is declared
 		val, ok := symbolTable.Lookup(variableNode.Token.Lexeme)
 		if !ok {
-			panic("Variable not declared: " + variableNode.Token.Lexeme)
+			panic(ErrVariableNotDeclared(variableNode.Token.Lexeme))
 		}
 		varDeclNode, ok := val.(*ASTVarDeclNode)
 		if !ok {
-			panic("Not a variable declaration: ")
+			panic(ErrNotVariableDeclaration(variableNode.Token.Lexeme))
 		}
 		if _, isEpsilon := variableNode.Offset.(*ASTEpsilon); !isEpsilon {
 			itemType := varDeclNode.Type[:strings.Index(varDeclNode.Type, "[")]
 			return itemType
 		}
-
 		return varDeclNode.Type
-
 	case *ASTBinaryOpNode:
 		leftType := getExpressionType(n.Left, symbolTable)
 		rightType := getExpressionType(n.Right, symbolTable)
 		if leftType != rightType {
-			panic("Type mismatch: expected " + leftType + ", got " + rightType)
+			panic(ErrTypeMismatch(leftType, rightType))
 		}
 		binaryOpNode := node.(*ASTBinaryOpNode)
 		if binaryOpNode.Operator == "<" || binaryOpNode.Operator == ">" || binaryOpNode.Operator == "<=" || binaryOpNode.Operator == ">=" || binaryOpNode.Operator == "==" {
@@ -126,30 +124,25 @@ func getExpressionType(node ASTNode, symbolTable SymbolTable) string {
 	case *ASTAssignmentNode:
 		return getExpressionType(n.Expr, symbolTable)
 	case *ASTFuncCallNode:
-		// Check if the function is declared
 		val, ok := symbolTable.Lookup(n.Name)
 		if !ok {
-			panic("Function not declared: " + n.Name)
+			panic(ErrFunctionNotDeclared(n.Name))
 		}
 		funcDeclNode, ok := val.(*ASTFuncDeclNode)
 		if !ok {
-			panic("Not a function declaration: " + n.Name)
+			panic(ErrNotVariableDeclaration(n.Name))
 		}
 		formalParamsNode, _ := funcDeclNode.Params.(*ASTFormalParamsNode)
-		// Check if the types of the arguments match
 		actualParamsNode, _ := n.Params.(*ASTActualParamsNode)
-
-		// Check if the number of arguments matches
 		if len(actualParamsNode.Params) != len(formalParamsNode.Params) {
-			panic("Argument count mismatch: expected " + fmt.Sprint(len(formalParamsNode.Params)) + ", got " + fmt.Sprint(len(actualParamsNode.Params)))
+			panic(ErrArgumentCountMismatch(len(formalParamsNode.Params), len(actualParamsNode.Params)))
 		}
 		for i, param := range actualParamsNode.Params {
 			paramType := getExpressionType(param, symbolTable)
 			formParamNode := formalParamsNode.Params[i].(*ASTVarDeclNode)
 			funcParamType := formParamNode.Type
-
 			if paramType != funcParamType {
-				panic("Type mismatch: expected " + funcParamType + ", got " + paramType)
+				panic(ErrTypeMismatch(funcParamType, paramType))
 			}
 		}
 		return funcDeclNode.ReturnType
@@ -159,10 +152,8 @@ func getExpressionType(node ASTNode, symbolTable SymbolTable) string {
 		return getExpressionType(n.Expr, symbolTable)
 	case *ASTTypeCastNode:
 		n, _ = node.(*ASTTypeCastNode)
-
 		return n.Type
 	case *ASTArrayNode:
-		// Check if the array is declared
 		arrNode := node.(*ASTArrayNode)
 		return arrNode.Type
 	case *ASTEpsilon:
@@ -171,50 +162,48 @@ func getExpressionType(node ASTNode, symbolTable SymbolTable) string {
 		switch n.Name {
 		case "__random_int":
 			if len(n.Args) != 1 {
-				panic("Invalid number of arguments for __random_int: expected 1, got " + fmt.Sprint(len(n.Args)))
+				panic(ErrArgumentCountMismatch(1, len(n.Args)))
 			}
 			argType := getExpressionType(n.Args[0], symbolTable)
 			if argType != "int" {
-				panic("Invalid argument type for __random_int: expected int, got " + argType)
+				panic(ErrTypeMismatch("int", argType))
 			}
 			return "int"
 		case "__delay":
 			if len(n.Args) != 1 {
-				panic("Invalid number of arguments for __delay: expected 1, got " + fmt.Sprint(len(n.Args)))
+				panic(ErrArgumentCountMismatch(1, len(n.Args)))
 			}
 			argType := getExpressionType(n.Args[0], symbolTable)
 			if argType != "int" {
-				panic("Invalid argument type for __delay: expected int, got " + argType)
+				panic(ErrTypeMismatch("int", argType))
 			}
 			return ""
-		case "__height":
-			return "int"
-		case "__width":
+		case "__height", "__width":
 			return "int"
 		case "__write":
 			if len(n.Args) != 3 {
-				panic("Invalid number of arguments for __write: expected 3, got " + fmt.Sprint(len(n.Args)))
+				panic(ErrArgumentCountMismatch(3, len(n.Args)))
 			}
 			arg1Type := getExpressionType(n.Args[0], symbolTable)
 			arg2Type := getExpressionType(n.Args[1], symbolTable)
 			arg3Type := getExpressionType(n.Args[2], symbolTable)
 			if arg1Type != "int" {
-				panic("Invalid argument type for __write: expected int, got " + arg1Type)
+				panic(ErrTypeMismatch("int", arg1Type))
 			}
 			if arg2Type != "int" {
-				panic("Invalid argument type for __write: expected int, got " + arg2Type)
+				panic(ErrTypeMismatch("int", arg2Type))
 			}
 			if arg3Type != "colour" {
-				panic("Invalid argument type for __write: expected color, got " + arg3Type)
+				panic(ErrTypeMismatch("colour", arg3Type))
 			}
 			return ""
 		case "__print":
 			if len(n.Args) != 1 {
-				panic("Invalid number of arguments for __print: expected 1, got " + fmt.Sprint(len(n.Args)))
+				panic(ErrArgumentCountMismatch(1, len(n.Args)))
 			}
 		case "__write_box":
 			if len(n.Args) != 5 {
-				panic("Invalid number of arguments for __random_int: expected 5 got " + fmt.Sprint(len(n.Args)))
+				panic(ErrArgumentCountMismatch(5, len(n.Args)))
 			}
 			arg1Type := getExpressionType(n.Args[0], symbolTable)
 			arg2Type := getExpressionType(n.Args[1], symbolTable)
@@ -222,87 +211,76 @@ func getExpressionType(node ASTNode, symbolTable SymbolTable) string {
 			arg4Type := getExpressionType(n.Args[3], symbolTable)
 			arg5Type := getExpressionType(n.Args[4], symbolTable)
 			if arg1Type != "int" {
-				panic("Invalid argument type for __write_box: expected int, got " + arg1Type)
+				panic(ErrTypeMismatch("int", arg1Type))
 			}
 			if arg2Type != "int" {
-				panic("Invalid argument type for __write_box: expected int, got " + arg2Type)
+				panic(ErrTypeMismatch("int", arg2Type))
 			}
 			if arg3Type != "int" {
-				panic("Invalid argument type for __write_box: expected int, got " + arg3Type)
+				panic(ErrTypeMismatch("int", arg3Type))
 			}
 			if arg4Type != "int" {
-				panic("Invalid argument type for __write_box: expected int, got " + arg4Type)
+				panic(ErrTypeMismatch("int", arg4Type))
 			}
 			if arg5Type != "colour" {
-				panic("Invalid argument type for __write_box: expected color, got " + arg5Type)
+				panic(ErrTypeMismatch("colour", arg5Type))
 			}
 			return "int"
 		case "__read":
 			if len(n.Args) != 2 {
-				panic("Invalid number of arguments for __read: expected 2, got " + fmt.Sprint(len(n.Args)))
+				panic(ErrArgumentCountMismatch(2, len(n.Args)))
 			}
 			arg1Type := getExpressionType(n.Args[0], symbolTable)
 			arg2Type := getExpressionType(n.Args[1], symbolTable)
 			if arg1Type != "int" {
-				panic("Invalid argument type for __read: expected int, got " + arg1Type)
+				panic(ErrTypeMismatch("int", arg1Type))
 			}
 			if arg2Type != "int" {
-				panic("Invalid argument type for __read: expected int, got " + arg2Type)
+				panic(ErrTypeMismatch("int", arg2Type))
 			}
 			return "colour"
 		default:
-			panic("Unknown builtin function: " + n.Name)
+			panic(ErrUnknownExpressionType(n.Name))
 		}
 		return ""
-
 	default:
-		panic("Unknown expression type" + fmt.Sprintf("%T", node))
+		panic(ErrUnknownExpressionType(node))
 	}
 }
 
 func (v *SemanticVisitor) VisitAssignmentNode(node *ASTAssignmentNode) {
-	// Check if the variable is declared
 	val, ok := v.SymbolTable.Lookup(node.Id.Token.Lexeme)
 	if !ok {
-		panic("Variable not declared: " + node.Id.Token.Lexeme)
+		panic(ErrVariableNotDeclared(node.Id.Token.Lexeme))
 	}
-
 	varDeclNode, ok := val.(*ASTVarDeclNode)
 	if !ok {
-		panic("Not a variable declaration: " + node.Id.Token.Lexeme)
+		panic(ErrNotVariableDeclaration(node.Id.Token.Lexeme))
 	}
-
 	if _, isEpsilon := node.Id.Offset.(*ASTEpsilon); !isEpsilon {
 		offsetType := getExpressionType(node.Id.Offset, *v.SymbolTable)
 		if offsetType != "int" {
-			panic("Invalid offset type: expected int, got " + offsetType)
+			panic(ErrInvalidOffsetType("int", offsetType))
 		}
-
 		if getExpressionType(node.Expr, *v.SymbolTable) != varDeclNode.Type[:strings.Index(varDeclNode.Type, "[")] {
-			panic(fmt.Sprintf("Type mismatch: expected %v, got %v", varDeclNode.Type[:strings.Index(varDeclNode.Type, "[")], getExpressionType(node.Expr, *v.SymbolTable)))
+			panic(ErrTypeMismatch(varDeclNode.Type[:strings.Index(varDeclNode.Type, "[")], getExpressionType(node.Expr, *v.SymbolTable)))
 		}
 	} else {
-		// Check if the type of the expression matches the variable type
 		if getExpressionType(node.Expr, *v.SymbolTable) != varDeclNode.Type {
-			panic(fmt.Sprintf("Type mismatch: expected %v, got %v", varDeclNode.Type, getExpressionType(node.Expr, *v.SymbolTable)))
+			panic(ErrTypeMismatch(varDeclNode.Type, getExpressionType(node.Expr, *v.SymbolTable)))
 		}
-
 	}
 	node.Expr.Accept(v)
 }
 
 func (v *SemanticVisitor) VisitVarDeclNode(node *ASTVarDeclNode) {
-	// Check if the variable is already declared in the current scope
 	if _, ok := v.SymbolTable.Lookup(node.Name); ok {
-		panic("Variable already declared: " + node.Name)
+		panic(ErrVariableAlreadyDeclared(node.Name))
 	}
-
 	nodeType := getExpressionType(node.Expression, *v.SymbolTable)
-	// Check if the type is valid
 	if nodeType != "" && nodeType != node.Type {
-		panic(fmt.Sprintf("Type mismatch: expected %v, got %v", node.Type, getExpressionType(node.Expression, *v.SymbolTable)))
+		panic(ErrTypeMismatch(node.Type, getExpressionType(node.Expression, *v.SymbolTable)))
 	}
-
 	v.SymbolTable.Insert(node.Name, node)
 	node.Expression.Accept(v)
 }
@@ -319,6 +297,13 @@ func (v *SemanticVisitor) VisitFunctionNode(node *ASTFuncDeclNode) {
 }
 
 func (v *SemanticVisitor) VisitProgramNode(node *ASTProgramNode) {
+
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", r)
+			os.Exit(1)
+		}
+	}()
 	// Visit the block node
 	pushAndPopIfBlock(v, &node.Block)
 }
@@ -402,7 +387,7 @@ func (v *SemanticVisitor) VisitBinaryOpNode(node *ASTBinaryOpNode) {
 	leftType := getExpressionType(node.Left, *v.SymbolTable)
 	rightType := getExpressionType(node.Right, *v.SymbolTable)
 	if leftType != rightType {
-		panic(fmt.Sprintf("Type mismatch: expected %v, got %v", leftType, rightType))
+		panic(ErrTypeMismatch(leftType, rightType))
 	}
 }
 func (v *SemanticVisitor) VisitUnaryOpNode(node *ASTUnaryOpNode) {
@@ -416,11 +401,11 @@ func (v *SemanticVisitor) VisitBooleanNode(node *ASTBooleanNode) {
 func (v *SemanticVisitor) VisitColorNode(node *ASTColorNode) {
 	hexValue := node.Value
 	if (len(hexValue) != 7 && len(hexValue) != 4) || hexValue[0] != '#' {
-		panic("Invalid color value: " + hexValue)
+		panic(ErrInvalidColorValue(hexValue))
 	}
 	// Check if the color value is valid
 	if _, err := fmt.Sscanf(hexValue, "#%x", new(int)); err != nil {
-		panic("Invalid color value: " + hexValue)
+		panic(ErrInvalidColorValue(hexValue))
 	}
 	// Do nothing
 }
@@ -450,17 +435,18 @@ func (v *SemanticVisitor) VisitExpressionNode(node *ASTExpressionNode) {
 func (v *SemanticVisitor) VisitFloatNode(node *ASTFloatNode) {
 	// Do nothing
 }
+
 func (v *SemanticVisitor) VisitFormalParamNode(node *ASTFormalParamNode) {
 	// Check if the parameter is already declared in the current scope
 	if _, ok := v.SymbolTable.Lookup(node.Name); ok {
-		panic("Parameter already declared: " + node.Name)
+		panic(ErrParameterAlreadyDeclared(node.Name))
 	}
 	v.SymbolTable.Insert(node.Name, node)
 }
 
 func (v *SemanticVisitor) VisitFuncDeclNode(node *ASTFuncDeclNode) {
 	if _, ok := v.SymbolTable.Lookup(node.Name); ok {
-		panic("Function already declared: " + node.Name)
+		panic(ErrFunctionAlreadyDeclared(node.Name))
 	}
 
 	v.SymbolTable.Insert(node.Name, node)
@@ -472,7 +458,7 @@ func (v *SemanticVisitor) VisitFuncDeclNode(node *ASTFuncDeclNode) {
 	funcBlock, _ := node.Block.(*ASTBlockNode)
 	hasReturn := hasReturnStatement(funcBlock, v, node.ReturnType)
 	if !hasReturn {
-		panic("Function must have a return statement")
+		panic(ErrFunctionMustHaveReturn())
 	}
 }
 
@@ -481,7 +467,7 @@ func hasReturnStatement(node ASTNode, v *SemanticVisitor, expectedType string) b
 	case *ASTReturnNode:
 		returnNode := node.(*ASTReturnNode)
 		if getExpressionType(returnNode.Expr, *v.SymbolTable) != expectedType {
-			panic(fmt.Sprintf("Return type mismatch: expected %v, got %v", expectedType, getExpressionType(returnNode.Expr, *v.SymbolTable)))
+			panic(ErrReturnTypeMismatch(expectedType, getExpressionType(returnNode.Expr, *v.SymbolTable)))
 		}
 		return true
 	case *ASTBlockNode:
@@ -510,21 +496,17 @@ func (v *SemanticVisitor) VisitSimpleExpressionNode(node *ASTSimpleExpression) {
 }
 
 func (v *SemanticVisitor) VisitArrayNode(node *ASTArrayNode) {
-	// Check if the array is already declared in the current scope
 	if node.Size < 0 {
-		panic("Array size must be greater than 0: " + fmt.Sprint(node.Size))
+		panic(ErrArraySizeNegative(node.Size))
 	}
 	if node.Size < len(node.Items) {
-		panic("Array size must be greater than the number of items: " + fmt.Sprint(node.Size) + " < " + fmt.Sprint(len(node.Items)))
+		panic(ErrArraySize(node.Size, len(node.Items)))
 	}
-
-	// Check if the types of the items match the array type
 	for _, item := range node.Items {
 		item.Accept(v)
 		itemType := getExpressionType(item, *v.SymbolTable)
-
 		if itemType != getArrayType(node) {
-			panic(fmt.Sprintf("Array item type mismatch: expected %v, got %v", getArrayType(node), itemType))
+			panic(ErrTypeMismatch(getArrayType(node), itemType))
 		}
 	}
 }

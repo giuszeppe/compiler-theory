@@ -31,6 +31,7 @@ func main() {
 	}
 
 	//node.Accept(printVisitor)
+
 	node.Accept(semanticVisitor)
 	node.Accept(generatorVisitor)
 	for _, instr := range generatorVisitor.Instructions {
