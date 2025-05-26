@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"slices"
 )
 
@@ -661,7 +660,7 @@ func (l *Lexer) NextToken(src string, idx int) (Token, string) {
 }
 
 func (l *Lexer) GenerateTokens(src string) []Token {
-	fmt.Println("INPUT::", src)
+	//fmt.Println("INPUT::", src)
 	tokens := []Token{}
 	idx := 0
 	token, lexeme := l.NextToken(src, idx)
