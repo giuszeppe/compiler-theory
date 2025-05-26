@@ -249,7 +249,7 @@ func getExpressionType(node ASTNode, symbolTable SymbolTable) string {
 			if arg2Type != "int" {
 				panic("Invalid argument type for __read: expected int, got " + arg2Type)
 			}
-			return "int"
+			return "colour"
 		default:
 			panic("Unknown builtin function: " + n.Name)
 		}
@@ -397,6 +397,13 @@ func (v *SemanticVisitor) VisitBinaryOpNode(node *ASTBinaryOpNode) {
 	// Visit the left and right operands
 	node.Left.Accept(v)
 	node.Right.Accept(v)
+
+	// Check if type is the same
+	leftType := getExpressionType(node.Left, *v.SymbolTable)
+	rightType := getExpressionType(node.Right, *v.SymbolTable)
+	if leftType != rightType {
+		panic(fmt.Sprintf("Type mismatch: expected %v, got %v", leftType, rightType))
+	}
 }
 func (v *SemanticVisitor) VisitUnaryOpNode(node *ASTUnaryOpNode) {
 	// Visit the operand
@@ -490,7 +497,12 @@ func hasReturnStatement(node ASTNode, v *SemanticVisitor, expectedType string) b
 			}
 			return true
 		}
+	case *ASTWhileNode:
+		return hasReturnStatement(n.Block, v, expectedType)
+	case *ASTForNode:
+		return hasReturnStatement(n.Block, v, expectedType)
 	}
+
 	return false
 }
 
