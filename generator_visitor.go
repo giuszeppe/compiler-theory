@@ -442,9 +442,8 @@ func (v *GeneratorVisitor) VisitUnaryOpNode(node *ASTUnaryOpNode) {
 	node.Operand.Accept(v)
 	switch node.Operator {
 	case "-":
-		v.emit("dec")
-	case "+":
-		v.emit("inc")
+		v.emit("push 0")
+		v.emit("sub")
 	case "not":
 		v.emit("not")
 	}
