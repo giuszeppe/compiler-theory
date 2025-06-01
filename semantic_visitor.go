@@ -159,7 +159,7 @@ func getExpressionType(node ASTNode, symbolTable SymbolTable) string {
 	case *ASTEpsilon:
 		return ""
 	case *ASTBuiltinFuncNode:
-		switch n.Name {
+		switch n.Token.Lexeme {
 		case "__random_int":
 			if len(n.Args) != 1 {
 				panic(ErrArgumentCountMismatch(1, len(n.Args), n.Token))
@@ -240,7 +240,7 @@ func getExpressionType(node ASTNode, symbolTable SymbolTable) string {
 			}
 			return "colour"
 		default:
-			panic(ErrUnknownExpressionType(n.Name))
+			panic(ErrUnknownExpressionType(n.Token))
 		}
 		return ""
 	default:
@@ -274,14 +274,14 @@ func (v *SemanticVisitor) VisitAssignmentNode(node *ASTAssignmentNode) {
 }
 
 func (v *SemanticVisitor) VisitVarDeclNode(node *ASTVarDeclNode) {
-	if _, ok := v.SymbolTable.Lookup(node.Name); ok {
+	if _, ok := v.SymbolTable.Lookup(node.Token.Lexeme); ok {
 		panic(ErrVariableAlreadyDeclared(node.Token))
 	}
 	nodeType := getExpressionType(node.Expression, *v.SymbolTable)
 	if nodeType != "" && nodeType != node.Type {
 		panic(ErrTypeMismatch(node.Type, getExpressionType(node.Expression, *v.SymbolTable), node.Token))
 	}
-	v.SymbolTable.Insert(node.Name, node)
+	v.SymbolTable.Insert(node.Token.Lexeme, node)
 	node.Expression.Accept(v)
 }
 func (v *SemanticVisitor) VisitBlockNode(node *ASTBlockNode) {
@@ -445,11 +445,11 @@ func (v *SemanticVisitor) VisitFormalParamNode(node *ASTFormalParamNode) {
 }
 
 func (v *SemanticVisitor) VisitFuncDeclNode(node *ASTFuncDeclNode) {
-	if _, ok := v.SymbolTable.Lookup(node.Name); ok {
+	if _, ok := v.SymbolTable.Lookup(node.Token.Lexeme); ok {
 		panic(ErrFunctionAlreadyDeclared(node.Token))
 	}
 
-	v.SymbolTable.Insert(node.Name, node)
+	v.SymbolTable.Insert(node.Token.Lexeme, node)
 	v.SymbolTable.Push()
 	defer v.SymbolTable.Pop()
 	node.Params.Accept(v)

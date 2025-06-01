@@ -118,7 +118,6 @@ func NewGrammar() *Grammar {
 			// if-else to match the VarDeclSuffix and behave differently if it's an array or a normal expression
 			return &ASTVarDeclNode{
 				Token:      ch[1].(*ASTSimpleExpression).Token,
-				Name:       ch[1].(*ASTSimpleExpression).Token.Lexeme,
 				Type:       ch[3].(*ASTTypeNode).Name,
 				Expression: ch[4],
 			}
@@ -671,7 +670,7 @@ func NewGrammar() *Grammar {
 				ch[4].(*ASTArrayNode).Type = ch[3].(*ASTTypeNode).Name
 			}
 			return &ASTVarDeclNode{
-				Name:       ch[1].(*ASTSimpleExpression).Token.Lexeme,
+				Token:      ch[1].(*ASTSimpleExpression).Token,
 				Type:       ch[3].(*ASTTypeNode).Name,
 				Expression: ch[4],
 			}
@@ -719,7 +718,6 @@ func NewGrammar() *Grammar {
 			}
 			return &ASTFuncDeclNode{
 				Token:      ch[1].(*ASTSimpleExpression).Token,
-				Name:       ch[1].(*ASTSimpleExpression).Token.Lexeme,
 				Params:     ch[3],
 				ReturnType: retType,
 				Block:      ch[8].(*ASTBlockNode),
@@ -737,8 +735,7 @@ func NewGrammar() *Grammar {
 				varType += "[" + ch[3].(*ASTSimpleExpression).Token.Lexeme + "]"
 			}
 			param := ASTVarDeclNode{
-				Token:      ch[1].(*ASTSimpleExpression).Token,
-				Name:       ch[0].(*ASTSimpleExpression).Token.Lexeme,
+				Token:      ch[0].(*ASTSimpleExpression).Token,
 				Type:       varType,
 				Expression: &ASTExpressionNode{Expr: &ASTEpsilon{}},
 			}
@@ -760,7 +757,7 @@ func NewGrammar() *Grammar {
 				varType += "[" + ch[4].(*ASTSimpleExpression).Token.Lexeme + "]"
 			}
 			param := ASTVarDeclNode{
-				Name:       ch[1].(*ASTSimpleExpression).Token.Lexeme,
+				Token:      ch[1].(*ASTSimpleExpression).Token,
 				Type:       varType,
 				Expression: &ASTExpressionNode{Expr: &ASTEpsilon{}},
 			}
@@ -821,7 +818,6 @@ func NewGrammar() *Grammar {
 		Action: func(ch []ASTNode) ASTNode {
 			return &ASTBuiltinFuncNode{
 				Token: ch[0].(*ASTSimpleExpression).Token,
-				Name:  ch[0].(*ASTSimpleExpression).Token.Lexeme,
 				Args:  []ASTNode{ch[1]},
 			}
 		},
@@ -834,7 +830,6 @@ func NewGrammar() *Grammar {
 		Action: func(ch []ASTNode) ASTNode {
 			return &ASTBuiltinFuncNode{
 				Token: ch[0].(*ASTSimpleExpression).Token,
-				Name:  ch[0].(*ASTSimpleExpression).Token.Lexeme,
 				Args:  []ASTNode{ch[1]},
 			}
 		},
@@ -847,7 +842,6 @@ func NewGrammar() *Grammar {
 		Action: func(ch []ASTNode) ASTNode {
 			return &ASTBuiltinFuncNode{
 				Token: ch[0].(*ASTSimpleExpression).Token,
-				Name:  ch[0].(*ASTSimpleExpression).Token.Lexeme,
 				Args:  []ASTNode{ch[1], ch[3], ch[5]},
 			}
 		},
@@ -860,7 +854,6 @@ func NewGrammar() *Grammar {
 		Action: func(ch []ASTNode) ASTNode {
 			return &ASTBuiltinFuncNode{
 				Token: ch[0].(*ASTSimpleExpression).Token,
-				Name:  ch[0].(*ASTSimpleExpression).Token.Lexeme,
 				Args:  []ASTNode{ch[1], ch[3], ch[5], ch[7], ch[9]},
 			}
 		},
@@ -872,7 +865,6 @@ func NewGrammar() *Grammar {
 		Action: func(ch []ASTNode) ASTNode {
 			return &ASTBuiltinFuncNode{
 				Token: ch[0].(*ASTSimpleExpression).Token,
-				Name:  ch[0].(*ASTSimpleExpression).Token.Lexeme,
 				Args:  []ASTNode{ch[1]},
 			}
 		},
@@ -885,7 +877,6 @@ func NewGrammar() *Grammar {
 		Action: func(ch []ASTNode) ASTNode {
 			return &ASTBuiltinFuncNode{
 				Token: ch[0].(*ASTSimpleExpression).Token,
-				Name:  ch[0].(*ASTSimpleExpression).Token.Lexeme,
 				Args:  []ASTNode{},
 			}
 		},
@@ -898,7 +889,6 @@ func NewGrammar() *Grammar {
 		Action: func(ch []ASTNode) ASTNode {
 			return &ASTBuiltinFuncNode{
 				Token: ch[0].(*ASTSimpleExpression).Token,
-				Name:  ch[0].(*ASTSimpleExpression).Token.Lexeme,
 				Args:  []ASTNode{},
 			}
 		},
@@ -919,7 +909,6 @@ func NewGrammar() *Grammar {
 		Action: func(ch []ASTNode) ASTNode {
 			return &ASTBuiltinFuncNode{
 				Token: ch[0].(*ASTSimpleExpression).Token,
-				Name:  "__read",
 				Args:  []ASTNode{ch[2], ch[4]},
 			}
 		},
@@ -932,7 +921,6 @@ func NewGrammar() *Grammar {
 		Action: func(ch []ASTNode) ASTNode {
 			return &ASTBuiltinFuncNode{
 				Token: ch[0].(*ASTSimpleExpression).Token,
-				Name:  ch[0].(*ASTSimpleExpression).Token.Lexeme,
 				Args:  []ASTNode{ch[2]},
 			}
 		},

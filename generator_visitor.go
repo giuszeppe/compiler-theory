@@ -162,7 +162,7 @@ func openFrameAndPopIfBlock(v *GeneratorVisitor, node ASTNode) {
 // ===== Builtins =====
 
 func (v *GeneratorVisitor) VisitBuiltinFuncNode(node *ASTBuiltinFuncNode) {
-	switch node.Name {
+	switch node.Token.Lexeme {
 	case "__delay":
 		node.Args[0].Accept(v)
 		v.emit("delay")
@@ -240,7 +240,7 @@ func (v *GeneratorVisitor) getExpressionType(node ASTNode) string {
 	case *ASTAssignmentNode:
 		return v.getExpressionType(node.Expr)
 	case *ASTBuiltinFuncNode:
-		switch node.Name {
+		switch node.Token.Lexeme {
 		case "__width", "__height":
 			return "int"
 		case "__read":
@@ -255,12 +255,12 @@ func (v *GeneratorVisitor) getExpressionType(node ASTNode) string {
 // Functions node
 func (v *GeneratorVisitor) VisitFuncDeclNode(node *ASTFuncDeclNode) {
 	v.DeepLevel = -1 // function block is closed by ret
-	v.SymbolTable.Define(node.Name, node.ReturnType)
+	v.SymbolTable.Define(node.Token.Lexeme, node.ReturnType)
 	// push frame
 	skipFunctionBodyIdx := v.emit("push TBD")
 	v.emit("jmp")
 	v.SymbolTable.PushFrame()
-	v.emit("." + node.Name)
+	v.emit("." + node.Token.Lexeme)
 	paramCount := 0
 	for _, param := range node.Params.(*ASTFormalParamsNode).Params {
 		varDeclNode := param.(*ASTVarDeclNode)
@@ -290,7 +290,7 @@ func (v *GeneratorVisitor) VisitFuncDeclNode(node *ASTFuncDeclNode) {
 
 func (v *GeneratorVisitor) VisitFormalParamsNode(node *ASTFormalParamsNode) {
 	for _, param := range node.Params {
-		v.SymbolTable.Define(param.(*ASTVarDeclNode).Name, param.(*ASTVarDeclNode).Type)
+		v.SymbolTable.Define(param.(*ASTVarDeclNode).Token.Lexeme, param.(*ASTVarDeclNode).Type)
 	}
 }
 
@@ -470,8 +470,8 @@ func (v *GeneratorVisitor) VisitVarDeclNode(node *ASTVarDeclNode) {
 	// 		item = v.SymbolTable.Define(node.Name+fmt.Sprintf("[%d]", i), node.Type)
 	// 	}
 	// }
-	item = v.SymbolTable.Define(node.Name, node.Type)
-	_, a, _ := v.SymbolTable.Resolve(node.Name)
+	item = v.SymbolTable.Define(node.Token.Lexeme, node.Type)
+	_, a, _ := v.SymbolTable.Resolve(node.Token.Lexeme)
 
 	// evaluate expression
 	node.Expression.Accept(v)

@@ -98,7 +98,6 @@ func (n *ASTTypeNode) Accept(visitor ASTVisitor) {
 
 type ASTVarDeclNode struct {
 	Token      Token
-	Name       string
 	Type       string
 	Expression ASTNode
 }
@@ -218,7 +217,6 @@ func (n *ASTFormalParamsNode) Accept(visitor ASTVisitor) {
 
 type ASTFuncDeclNode struct {
 	Token      Token
-	Name       string
 	ReturnType string
 	Params     ASTNode
 	Block      ASTNode
@@ -248,7 +246,6 @@ func (n *ASTFloatNode) Accept(visitor ASTVisitor) {
 
 type ASTBuiltinFuncNode struct {
 	Token Token
-	Name  string
 	Args  []ASTNode
 }
 

@@ -44,7 +44,7 @@ func (v *PrintNodesVisitor) VisitAssignmentNode(node *ASTAssignmentNode) {
 func (v *PrintNodesVisitor) VisitVarDeclNode(node *ASTVarDeclNode) {
 	v.NodeCount++
 	fmt.Print(strings.Repeat("\t", v.TabCount), "Var decl node => ")
-	fmt.Printf("%v %v\n", node.Name, node.Type)
+	fmt.Printf("%v %v\n", node.Token.Lexeme, node.Type)
 	v.IncTabCount()
 	node.Expression.Accept(v)
 
@@ -165,7 +165,7 @@ func (v *PrintNodesVisitor) VisitForNode(node *ASTForNode) {
 
 func (v *PrintNodesVisitor) VisitFuncDeclNode(node *ASTFuncDeclNode) {
 	v.NodeCount++
-	fmt.Println(strings.Repeat("\t", v.TabCount), "Function decl node =>", node.Name, ":", node.ReturnType)
+	fmt.Println(strings.Repeat("\t", v.TabCount), "Function decl node =>", node.Token.Lexeme, ":", node.ReturnType)
 	v.IncTabCount()
 
 	fmt.Println(strings.Repeat("\t", v.TabCount), "Function params =>")
@@ -206,7 +206,7 @@ func (v *PrintNodesVisitor) VisitFloatNode(node *ASTFloatNode) {
 
 func (v *PrintNodesVisitor) VisitBuiltinFuncNode(node *ASTBuiltinFuncNode) {
 	v.NodeCount++
-	fmt.Println(strings.Repeat("\t", v.TabCount), "Builtin function node =>", node.Name)
+	fmt.Println(strings.Repeat("\t", v.TabCount), "Builtin function node =>", node.Token.Lexeme)
 	v.IncTabCount()
 	for _, arg := range node.Args {
 		arg.Accept(v)
