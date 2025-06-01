@@ -97,6 +97,7 @@ func (n *ASTTypeNode) Accept(visitor ASTVisitor) {
 }
 
 type ASTVarDeclNode struct {
+	Token      Token
 	Name       string
 	Type       string
 	Expression ASTNode
@@ -131,6 +132,7 @@ func (n *ASTSimpleExpression) Accept(visitor ASTVisitor) {
 }
 
 type ASTBinaryOpNode struct {
+	Token    Token
 	Operator string
 	Left     ASTNode
 	Right    ASTNode
@@ -158,7 +160,7 @@ func (b *ASTEpsilon) Accept(visitor ASTVisitor) {
 
 type ASTOpList struct {
 	Pairs []struct {
-		Op    string
+		Op    Token
 		Right ASTNode
 	}
 }
@@ -245,8 +247,9 @@ func (n *ASTFloatNode) Accept(visitor ASTVisitor) {
 }
 
 type ASTBuiltinFuncNode struct {
-	Name string
-	Args []ASTNode
+	Token Token
+	Name  string
+	Args  []ASTNode
 }
 
 func (n *ASTBuiltinFuncNode) Accept(visitor ASTVisitor) {
@@ -254,7 +257,7 @@ func (n *ASTBuiltinFuncNode) Accept(visitor ASTVisitor) {
 }
 
 type ASTFuncCallNode struct {
-	Name   string
+	Name   Token
 	Params ASTNode
 }
 
@@ -299,6 +302,7 @@ func (n *ASTBooleanNode) Accept(visitor ASTVisitor) {
 }
 
 type ASTColorNode struct {
+	Token Token
 	Value string
 }
 
@@ -308,7 +312,8 @@ func (n *ASTColorNode) Accept(visitor ASTVisitor) {
 }
 
 type ASTReturnNode struct {
-	Expr ASTNode
+	Token Token
+	Expr  ASTNode
 }
 
 func (n *ASTReturnNode) Accept(visitor ASTVisitor) {
@@ -320,6 +325,7 @@ type ASTArrayNode struct {
 	Type  string
 	Items []ASTNode
 	Size  int
+	Token Token
 }
 
 func (n *ASTArrayNode) Accept(visitor ASTVisitor) {

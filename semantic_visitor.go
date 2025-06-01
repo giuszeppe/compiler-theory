@@ -112,7 +112,7 @@ func getExpressionType(node ASTNode, symbolTable SymbolTable) string {
 		leftType := getExpressionType(n.Left, symbolTable)
 		rightType := getExpressionType(n.Right, symbolTable)
 		if leftType != rightType {
-			panic(ErrTypeMismatch(leftType, rightType))
+			panic(ErrTypeMismatch(leftType, rightType, n.Token))
 		}
 		binaryOpNode := node.(*ASTBinaryOpNode)
 		if binaryOpNode.Operator == "<" || binaryOpNode.Operator == ">" || binaryOpNode.Operator == "<=" || binaryOpNode.Operator == ">=" || binaryOpNode.Operator == "==" {
@@ -124,7 +124,7 @@ func getExpressionType(node ASTNode, symbolTable SymbolTable) string {
 	case *ASTAssignmentNode:
 		return getExpressionType(n.Expr, symbolTable)
 	case *ASTFuncCallNode:
-		val, ok := symbolTable.Lookup(n.Name)
+		val, ok := symbolTable.Lookup(n.Name.Lexeme)
 		if !ok {
 			panic(ErrFunctionNotDeclared(n.Name))
 		}
@@ -135,14 +135,14 @@ func getExpressionType(node ASTNode, symbolTable SymbolTable) string {
 		formalParamsNode, _ := funcDeclNode.Params.(*ASTFormalParamsNode)
 		actualParamsNode, _ := n.Params.(*ASTActualParamsNode)
 		if len(actualParamsNode.Params) != len(formalParamsNode.Params) {
-			panic(ErrArgumentCountMismatch(len(formalParamsNode.Params), len(actualParamsNode.Params), funcDeclNode.Name))
+			panic(ErrArgumentCountMismatch(len(formalParamsNode.Params), len(actualParamsNode.Params), funcDeclNode.Token))
 		}
 		for i, param := range actualParamsNode.Params {
 			paramType := getExpressionType(param, symbolTable)
 			formParamNode := formalParamsNode.Params[i].(*ASTVarDeclNode)
 			funcParamType := formParamNode.Type
 			if paramType != funcParamType {
-				panic(ErrTypeMismatch(funcParamType, paramType))
+				panic(ErrTypeMismatch(funcParamType, paramType, formParamNode.Token))
 			}
 		}
 		return funcDeclNode.ReturnType
@@ -162,48 +162,48 @@ func getExpressionType(node ASTNode, symbolTable SymbolTable) string {
 		switch n.Name {
 		case "__random_int":
 			if len(n.Args) != 1 {
-				panic(ErrArgumentCountMismatch(1, len(n.Args), n.Name))
+				panic(ErrArgumentCountMismatch(1, len(n.Args), n.Token))
 			}
 			argType := getExpressionType(n.Args[0], symbolTable)
 			if argType != "int" {
-				panic(ErrTypeMismatch("int", argType))
+				panic(ErrTypeMismatch("int", argType, n.Token))
 			}
 			return "int"
 		case "__delay":
 			if len(n.Args) != 1 {
-				panic(ErrArgumentCountMismatch(1, len(n.Args), n.Name))
+				panic(ErrArgumentCountMismatch(1, len(n.Args), n.Token))
 			}
 			argType := getExpressionType(n.Args[0], symbolTable)
 			if argType != "int" {
-				panic(ErrTypeMismatch("int", argType))
+				panic(ErrTypeMismatch("int", argType, n.Token))
 			}
 			return ""
 		case "__height", "__width":
 			return "int"
 		case "__write":
 			if len(n.Args) != 3 {
-				panic(ErrArgumentCountMismatch(3, len(n.Args), n.Name))
+				panic(ErrArgumentCountMismatch(3, len(n.Args), n.Token))
 			}
 			arg1Type := getExpressionType(n.Args[0], symbolTable)
 			arg2Type := getExpressionType(n.Args[1], symbolTable)
 			arg3Type := getExpressionType(n.Args[2], symbolTable)
 			if arg1Type != "int" {
-				panic(ErrTypeMismatch("int", arg1Type))
+				panic(ErrTypeMismatch("int", arg1Type, n.Token))
 			}
 			if arg2Type != "int" {
-				panic(ErrTypeMismatch("int", arg2Type))
+				panic(ErrTypeMismatch("int", arg2Type, n.Token))
 			}
 			if arg3Type != "colour" {
-				panic(ErrTypeMismatch("colour", arg3Type))
+				panic(ErrTypeMismatch("colour", arg3Type, n.Token))
 			}
 			return ""
 		case "__print":
 			if len(n.Args) != 1 {
-				panic(ErrArgumentCountMismatch(1, len(n.Args), n.Name))
+				panic(ErrArgumentCountMismatch(1, len(n.Args), n.Token))
 			}
 		case "__write_box":
 			if len(n.Args) != 5 {
-				panic(ErrArgumentCountMismatch(5, len(n.Args), n.Name))
+				panic(ErrArgumentCountMismatch(5, len(n.Args), n.Token))
 			}
 			arg1Type := getExpressionType(n.Args[0], symbolTable)
 			arg2Type := getExpressionType(n.Args[1], symbolTable)
@@ -211,32 +211,32 @@ func getExpressionType(node ASTNode, symbolTable SymbolTable) string {
 			arg4Type := getExpressionType(n.Args[3], symbolTable)
 			arg5Type := getExpressionType(n.Args[4], symbolTable)
 			if arg1Type != "int" {
-				panic(ErrTypeMismatch("int", arg1Type))
+				panic(ErrTypeMismatch("int", arg1Type, n.Token))
 			}
 			if arg2Type != "int" {
-				panic(ErrTypeMismatch("int", arg2Type))
+				panic(ErrTypeMismatch("int", arg2Type, n.Token))
 			}
 			if arg3Type != "int" {
-				panic(ErrTypeMismatch("int", arg3Type))
+				panic(ErrTypeMismatch("int", arg3Type, n.Token))
 			}
 			if arg4Type != "int" {
-				panic(ErrTypeMismatch("int", arg4Type))
+				panic(ErrTypeMismatch("int", arg4Type, n.Token))
 			}
 			if arg5Type != "colour" {
-				panic(ErrTypeMismatch("colour", arg5Type))
+				panic(ErrTypeMismatch("colour", arg5Type, n.Token))
 			}
 			return "int"
 		case "__read":
 			if len(n.Args) != 2 {
-				panic(ErrArgumentCountMismatch(2, len(n.Args), n.Name))
+				panic(ErrArgumentCountMismatch(2, len(n.Args), n.Token))
 			}
 			arg1Type := getExpressionType(n.Args[0], symbolTable)
 			arg2Type := getExpressionType(n.Args[1], symbolTable)
 			if arg1Type != "int" {
-				panic(ErrTypeMismatch("int", arg1Type))
+				panic(ErrTypeMismatch("int", arg1Type, n.Token))
 			}
 			if arg2Type != "int" {
-				panic(ErrTypeMismatch("int", arg2Type))
+				panic(ErrTypeMismatch("int", arg2Type, n.Token))
 			}
 			return "colour"
 		default:
@@ -263,11 +263,11 @@ func (v *SemanticVisitor) VisitAssignmentNode(node *ASTAssignmentNode) {
 			panic(ErrInvalidOffsetType("int", offsetType, node.Id.Token))
 		}
 		if getExpressionType(node.Expr, *v.SymbolTable) != varDeclNode.Type[:strings.Index(varDeclNode.Type, "[")] {
-			panic(ErrTypeMismatch(varDeclNode.Type[:strings.Index(varDeclNode.Type, "[")], getExpressionType(node.Expr, *v.SymbolTable)))
+			panic(ErrTypeMismatch(varDeclNode.Type[:strings.Index(varDeclNode.Type, "[")], getExpressionType(node.Expr, *v.SymbolTable), node.Id.Token))
 		}
 	} else {
 		if getExpressionType(node.Expr, *v.SymbolTable) != varDeclNode.Type {
-			panic(ErrTypeMismatch(varDeclNode.Type, getExpressionType(node.Expr, *v.SymbolTable)))
+			panic(ErrTypeMismatch(varDeclNode.Type, getExpressionType(node.Expr, *v.SymbolTable), node.Id.Token))
 		}
 	}
 	node.Expr.Accept(v)
@@ -275,11 +275,11 @@ func (v *SemanticVisitor) VisitAssignmentNode(node *ASTAssignmentNode) {
 
 func (v *SemanticVisitor) VisitVarDeclNode(node *ASTVarDeclNode) {
 	if _, ok := v.SymbolTable.Lookup(node.Name); ok {
-		panic(ErrVariableAlreadyDeclared(node.Name))
+		panic(ErrVariableAlreadyDeclared(node.Token))
 	}
 	nodeType := getExpressionType(node.Expression, *v.SymbolTable)
 	if nodeType != "" && nodeType != node.Type {
-		panic(ErrTypeMismatch(node.Type, getExpressionType(node.Expression, *v.SymbolTable)))
+		panic(ErrTypeMismatch(node.Type, getExpressionType(node.Expression, *v.SymbolTable), node.Token))
 	}
 	v.SymbolTable.Insert(node.Name, node)
 	node.Expression.Accept(v)
@@ -366,9 +366,9 @@ func (v *SemanticVisitor) VisitActualParamNode(node *ASTActualParamNode) {
 
 func (v *SemanticVisitor) VisitFuncCallNode(node *ASTFuncCallNode) {
 	// Check if the function is declared
-	_, ok := v.SymbolTable.Lookup(node.Name)
+	_, ok := v.SymbolTable.Lookup(node.Name.Lexeme)
 	if !ok {
-		panic("Function not declared: " + node.Name)
+		panic(ErrFunctionNotDeclared(node.Name))
 	}
 
 	node.Params.Accept(v)
@@ -387,7 +387,7 @@ func (v *SemanticVisitor) VisitBinaryOpNode(node *ASTBinaryOpNode) {
 	leftType := getExpressionType(node.Left, *v.SymbolTable)
 	rightType := getExpressionType(node.Right, *v.SymbolTable)
 	if leftType != rightType {
-		panic(ErrTypeMismatch(leftType, rightType))
+		panic(ErrTypeMismatch(leftType, rightType, node.Token))
 	}
 }
 func (v *SemanticVisitor) VisitUnaryOpNode(node *ASTUnaryOpNode) {
@@ -401,11 +401,11 @@ func (v *SemanticVisitor) VisitBooleanNode(node *ASTBooleanNode) {
 func (v *SemanticVisitor) VisitColorNode(node *ASTColorNode) {
 	hexValue := node.Value
 	if (len(hexValue) != 7 && len(hexValue) != 4) || hexValue[0] != '#' {
-		panic(ErrInvalidColorValue(hexValue))
+		panic(ErrInvalidColorValue(hexValue, node.Token))
 	}
 	// Check if the color value is valid
 	if _, err := fmt.Sscanf(hexValue, "#%x", new(int)); err != nil {
-		panic(ErrInvalidColorValue(hexValue))
+		panic(ErrInvalidColorValue(hexValue, node.Token))
 	}
 	// Do nothing
 }
@@ -446,7 +446,7 @@ func (v *SemanticVisitor) VisitFormalParamNode(node *ASTFormalParamNode) {
 
 func (v *SemanticVisitor) VisitFuncDeclNode(node *ASTFuncDeclNode) {
 	if _, ok := v.SymbolTable.Lookup(node.Name); ok {
-		panic(ErrFunctionAlreadyDeclared(node.Name, node.Token))
+		panic(ErrFunctionAlreadyDeclared(node.Token))
 	}
 
 	v.SymbolTable.Insert(node.Name, node)
@@ -458,7 +458,7 @@ func (v *SemanticVisitor) VisitFuncDeclNode(node *ASTFuncDeclNode) {
 	funcBlock, _ := node.Block.(*ASTBlockNode)
 	hasReturn := hasReturnStatement(funcBlock, v, node.ReturnType)
 	if !hasReturn {
-		panic(ErrFunctionMustHaveReturn(node.Name))
+		panic(ErrFunctionMustHaveReturn(node.Token))
 	}
 }
 
@@ -467,7 +467,7 @@ func hasReturnStatement(node ASTNode, v *SemanticVisitor, expectedType string) b
 	case *ASTReturnNode:
 		returnNode := node.(*ASTReturnNode)
 		if getExpressionType(returnNode.Expr, *v.SymbolTable) != expectedType {
-			panic(ErrReturnTypeMismatch(expectedType, getExpressionType(returnNode.Expr, *v.SymbolTable)))
+			panic(ErrReturnTypeMismatch(expectedType, getExpressionType(returnNode.Expr, *v.SymbolTable), returnNode.Token))
 		}
 		return true
 	case *ASTBlockNode:
@@ -497,16 +497,16 @@ func (v *SemanticVisitor) VisitSimpleExpressionNode(node *ASTSimpleExpression) {
 
 func (v *SemanticVisitor) VisitArrayNode(node *ASTArrayNode) {
 	if node.Size < 0 {
-		panic(ErrArraySizeNegative(node.Size))
+		panic(ErrArraySizeNegative(node.Size, node.Token))
 	}
 	if node.Size < len(node.Items) {
-		panic(ErrArraySize(node.Size, len(node.Items)))
+		panic(ErrArraySize(node.Size, len(node.Items), node.Token))
 	}
 	for _, item := range node.Items {
 		item.Accept(v)
 		itemType := getExpressionType(item, *v.SymbolTable)
 		if itemType != getArrayType(node) {
-			panic(ErrTypeMismatch(getArrayType(node), itemType))
+			panic(ErrTypeMismatch(getArrayType(node), itemType, node.Token))
 		}
 	}
 }

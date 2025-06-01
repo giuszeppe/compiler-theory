@@ -223,7 +223,7 @@ func (v *GeneratorVisitor) getExpressionType(node ASTNode) string {
 	case *ASTArrayNode:
 		return node.Type
 	case *ASTFuncCallNode:
-		item, _, _ := v.SymbolTable.Resolve(node.Name)
+		item, _, _ := v.SymbolTable.Resolve(node.Name.Lexeme)
 		return item.Type
 
 	case *ASTBinaryOpNode:
@@ -321,7 +321,7 @@ func (v *GeneratorVisitor) VisitFuncCallNode(node *ASTFuncCallNode) {
 	}
 
 	v.emit("push " + fmt.Sprint(CountActualParams(params, v))) // param count
-	v.emit("push ." + node.Name)                               // function name
+	v.emit("push ." + node.Name.Lexeme)                        // function name
 	v.emit("call")
 }
 func CountActualParams(node *ASTActualParamsNode, v *GeneratorVisitor) int {
@@ -332,7 +332,7 @@ func CountActualParams(node *ASTActualParamsNode, v *GeneratorVisitor) int {
 			paramCount += len(p.Type[strings.Index(p.Type, "[")+1 : strings.LastIndex(p.Type, "]")])
 		case *ASTFuncCallNode:
 			// Assuming the function return type is stored in the SymbolTable
-			item, _, _ := v.SymbolTable.Resolve(p.Name)
+			item, _, _ := v.SymbolTable.Resolve(p.Name.Lexeme)
 			if strings.Contains(item.Type, "[") {
 				arraySize := item.Type[strings.Index(item.Type, "[")+1 : strings.LastIndex(item.Type, "]")]
 				size, _ := strconv.Atoi(arraySize)

@@ -114,8 +114,8 @@ func (p *Parser) Parse(g *Grammar) (ASTNode, error) {
 		case TokenType:
 			// terminal: must match exactly
 			if tok.Type != s {
-				return nil, fmt.Errorf("mismatch: expected %v but saw %v at token %d",
-					s, tok.Type, pos)
+				return nil, fmt.Errorf("mismatch: expected %v but saw %v at token %d (at line %d, column %d)",
+					s, tok.Type, pos, tok.Line, tok.Column)
 			}
 			// consume it
 			*topFrame = (*topFrame)[1:]
@@ -128,11 +128,11 @@ func (p *Parser) Parse(g *Grammar) (ASTNode, error) {
 			// nonterminal: consult table
 			lookups, ok := table[s]
 			if !ok {
-				return nil, fmt.Errorf("no parsing table row for nonterminal %q", s)
+				return nil, fmt.Errorf("no parsing table row for nonterminal %q (at line %d, column %d)", s, tok.Line, tok.Column)
 			}
 			ri, ok := lookups[tok.Type]
 			if !ok {
-				return nil, fmt.Errorf("no rule for nonterminal %q on lookahead %v, position %v lexeme %v", s, tok.Type, pos, tok.Lexeme)
+				return nil, fmt.Errorf("no rule for nonterminal %q on lookahead %v, position %v lexeme %v (at line %d, column %d)", s, tok.Type, pos, tok.Lexeme, tok.Line, tok.Column)
 			}
 			rule := g.Rules[ri]
 

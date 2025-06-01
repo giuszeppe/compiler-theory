@@ -117,6 +117,7 @@ func NewGrammar() *Grammar {
 			}
 			// if-else to match the VarDeclSuffix and behave differently if it's an array or a normal expression
 			return &ASTVarDeclNode{
+				Token:      ch[1].(*ASTSimpleExpression).Token,
 				Name:       ch[1].(*ASTSimpleExpression).Token.Lexeme,
 				Type:       ch[3].(*ASTTypeNode).Name,
 				Expression: ch[4],
@@ -153,6 +154,7 @@ func NewGrammar() *Grammar {
 			v, _ := strconv.Atoi(arraySize)
 			arrayNode.Size = v
 			arrayNode.Items = append([]ASTNode{ch[4]}, arrayNode.Items...)
+			arrayNode.Token = ch[3].(*ASTSimpleExpression).Token
 			return arrayNode
 		},
 	})
@@ -306,7 +308,8 @@ func NewGrammar() *Grammar {
 
 			for _, pair := range opList.Pairs {
 				node = &ASTBinaryOpNode{
-					Operator: pair.Op,
+					Token:    pair.Op,
+					Operator: pair.Op.Lexeme,
 					Left:     node,
 					Right:    pair.Right,
 				}
@@ -344,13 +347,13 @@ func NewGrammar() *Grammar {
 		LHS: "ExprPrime",
 		RHS: []Symbol{RelOpToken, "SimpleExpr", "ExprPrime"},
 		Action: func(ch []ASTNode) ASTNode {
-			op := ch[0].(*ASTSimpleExpression).Token.Lexeme
+			op := ch[0].(*ASTSimpleExpression).Token
 			term := ch[1]
 			tailExpr := ch[2].(*ASTExpressionNode)
 			tail := tailExpr.Expr.(*ASTOpList)
 
 			pairs := append([]struct {
-				Op    string
+				Op    Token
 				Right ASTNode
 			}{{op, term}}, tail.Pairs...)
 
@@ -386,7 +389,8 @@ func NewGrammar() *Grammar {
 
 			for _, pair := range opList.Pairs {
 				node = &ASTBinaryOpNode{
-					Operator: pair.Op,
+					Token:    pair.Op,
+					Operator: pair.Op.Lexeme,
 					Left:     node,
 					Right:    pair.Right,
 				}
@@ -402,13 +406,13 @@ func NewGrammar() *Grammar {
 		LHS: "SimpleExprPrime",
 		RHS: []Symbol{"AdditiveOperator", "Term", "SimpleExprPrime"},
 		Action: func(ch []ASTNode) ASTNode {
-			op := ch[0].(*ASTSimpleExpression).Token.Lexeme
+			op := ch[0].(*ASTSimpleExpression).Token
 			term := ch[1]
 			tailExpr := ch[2].(*ASTExpressionNode)
 			tail := tailExpr.Expr.(*ASTOpList)
 
 			pairs := append([]struct {
-				Op    string
+				Op    Token
 				Right ASTNode
 			}{{op, term}}, tail.Pairs...)
 
@@ -444,7 +448,8 @@ func NewGrammar() *Grammar {
 
 			for _, pair := range opList.Pairs {
 				node = &ASTBinaryOpNode{
-					Operator: pair.Op,
+					Token:    pair.Op,
+					Operator: pair.Op.Lexeme,
 					Left:     node,
 					Right:    pair.Right,
 				}
@@ -459,13 +464,13 @@ func NewGrammar() *Grammar {
 		LHS: "TermPrime",
 		RHS: []Symbol{"MultiplicativeOperator", "Factor", "TermPrime"},
 		Action: func(ch []ASTNode) ASTNode {
-			op := ch[0].(*ASTSimpleExpression).Token.Lexeme
+			op := ch[0].(*ASTSimpleExpression).Token
 			term := ch[1]
 			tailExpr := ch[2].(*ASTExpressionNode)
 			tail := tailExpr.Expr.(*ASTOpList)
 
 			pairs := append([]struct {
-				Op    string
+				Op    Token
 				Right ASTNode
 			}{{op, term}}, tail.Pairs...)
 
@@ -732,6 +737,7 @@ func NewGrammar() *Grammar {
 				varType += "[" + ch[3].(*ASTSimpleExpression).Token.Lexeme + "]"
 			}
 			param := ASTVarDeclNode{
+				Token:      ch[1].(*ASTSimpleExpression).Token,
 				Name:       ch[0].(*ASTSimpleExpression).Token.Lexeme,
 				Type:       varType,
 				Expression: &ASTExpressionNode{Expr: &ASTEpsilon{}},
@@ -814,8 +820,9 @@ func NewGrammar() *Grammar {
 		RHS: []Symbol{Print, "Expr", SemicolonToken},
 		Action: func(ch []ASTNode) ASTNode {
 			return &ASTBuiltinFuncNode{
-				Name: ch[0].(*ASTSimpleExpression).Token.Lexeme,
-				Args: []ASTNode{ch[1]},
+				Token: ch[0].(*ASTSimpleExpression).Token,
+				Name:  ch[0].(*ASTSimpleExpression).Token.Lexeme,
+				Args:  []ASTNode{ch[1]},
 			}
 		},
 	})
@@ -826,8 +833,9 @@ func NewGrammar() *Grammar {
 		RHS: []Symbol{Delay, "Expr", SemicolonToken},
 		Action: func(ch []ASTNode) ASTNode {
 			return &ASTBuiltinFuncNode{
-				Name: ch[0].(*ASTSimpleExpression).Token.Lexeme,
-				Args: []ASTNode{ch[1]},
+				Token: ch[0].(*ASTSimpleExpression).Token,
+				Name:  ch[0].(*ASTSimpleExpression).Token.Lexeme,
+				Args:  []ASTNode{ch[1]},
 			}
 		},
 	})
@@ -838,8 +846,9 @@ func NewGrammar() *Grammar {
 		RHS: []Symbol{Write, "Expr", CommaToken, "Expr", CommaToken, "Expr", SemicolonToken},
 		Action: func(ch []ASTNode) ASTNode {
 			return &ASTBuiltinFuncNode{
-				Name: ch[0].(*ASTSimpleExpression).Token.Lexeme,
-				Args: []ASTNode{ch[1], ch[3], ch[5]},
+				Token: ch[0].(*ASTSimpleExpression).Token,
+				Name:  ch[0].(*ASTSimpleExpression).Token.Lexeme,
+				Args:  []ASTNode{ch[1], ch[3], ch[5]},
 			}
 		},
 	})
@@ -850,8 +859,9 @@ func NewGrammar() *Grammar {
 		RHS: []Symbol{WriteBox, "Expr", CommaToken, "Expr", CommaToken, "Expr", CommaToken, "Expr", CommaToken, "Expr", SemicolonToken},
 		Action: func(ch []ASTNode) ASTNode {
 			return &ASTBuiltinFuncNode{
-				Name: ch[0].(*ASTSimpleExpression).Token.Lexeme,
-				Args: []ASTNode{ch[1], ch[3], ch[5], ch[7], ch[9]},
+				Token: ch[0].(*ASTSimpleExpression).Token,
+				Name:  ch[0].(*ASTSimpleExpression).Token.Lexeme,
+				Args:  []ASTNode{ch[1], ch[3], ch[5], ch[7], ch[9]},
 			}
 		},
 	})
@@ -861,8 +871,9 @@ func NewGrammar() *Grammar {
 		RHS: []Symbol{ClearToken, "Expr", SemicolonToken},
 		Action: func(ch []ASTNode) ASTNode {
 			return &ASTBuiltinFuncNode{
-				Name: ch[0].(*ASTSimpleExpression).Token.Lexeme,
-				Args: []ASTNode{ch[1]},
+				Token: ch[0].(*ASTSimpleExpression).Token,
+				Name:  ch[0].(*ASTSimpleExpression).Token.Lexeme,
+				Args:  []ASTNode{ch[1]},
 			}
 		},
 	})
@@ -873,8 +884,9 @@ func NewGrammar() *Grammar {
 		RHS: []Symbol{PadWidth},
 		Action: func(ch []ASTNode) ASTNode {
 			return &ASTBuiltinFuncNode{
-				Name: ch[0].(*ASTSimpleExpression).Token.Lexeme,
-				Args: []ASTNode{},
+				Token: ch[0].(*ASTSimpleExpression).Token,
+				Name:  ch[0].(*ASTSimpleExpression).Token.Lexeme,
+				Args:  []ASTNode{},
 			}
 		},
 	})
@@ -885,8 +897,9 @@ func NewGrammar() *Grammar {
 		RHS: []Symbol{PadHeight},
 		Action: func(ch []ASTNode) ASTNode {
 			return &ASTBuiltinFuncNode{
-				Name: ch[0].(*ASTSimpleExpression).Token.Lexeme,
-				Args: []ASTNode{},
+				Token: ch[0].(*ASTSimpleExpression).Token,
+				Name:  ch[0].(*ASTSimpleExpression).Token.Lexeme,
+				Args:  []ASTNode{},
 			}
 		},
 	})
@@ -905,8 +918,9 @@ func NewGrammar() *Grammar {
 		RHS: []Symbol{PadRead, LeftParenToken, "Expr", CommaToken, "Expr", RightParenToken},
 		Action: func(ch []ASTNode) ASTNode {
 			return &ASTBuiltinFuncNode{
-				Name: "__read",
-				Args: []ASTNode{ch[2], ch[4]},
+				Token: ch[0].(*ASTSimpleExpression).Token,
+				Name:  "__read",
+				Args:  []ASTNode{ch[2], ch[4]},
 			}
 		},
 	})
@@ -917,8 +931,9 @@ func NewGrammar() *Grammar {
 		RHS: []Symbol{PadRandI, LeftParenToken, "Expr", RightParenToken},
 		Action: func(ch []ASTNode) ASTNode {
 			return &ASTBuiltinFuncNode{
-				Name: ch[0].(*ASTSimpleExpression).Token.Lexeme,
-				Args: []ASTNode{ch[2]},
+				Token: ch[0].(*ASTSimpleExpression).Token,
+				Name:  ch[0].(*ASTSimpleExpression).Token.Lexeme,
+				Args:  []ASTNode{ch[2]},
 			}
 		},
 	})
@@ -931,7 +946,7 @@ func NewGrammar() *Grammar {
 			_, isFuncCall := ch[1].(*ASTFuncCallNode)
 			if isFuncCall {
 				funcCall := ch[1].(*ASTFuncCallNode)
-				funcCall.Name = ch[0].(*ASTSimpleExpression).Token.Lexeme
+				funcCall.Name = ch[0].(*ASTSimpleExpression).Token
 				return funcCall
 			}
 			return &ASTVariableNode{Token: ch[0].(*ASTSimpleExpression).Token, Offset: ch[1]}
@@ -1094,6 +1109,7 @@ func NewGrammar() *Grammar {
 		RHS: []Symbol{HexNumber},
 		Action: func(ch []ASTNode) ASTNode {
 			return &ASTColorNode{
+				Token: ch[0].(*ASTSimpleExpression).Token,
 				Value: ch[0].(*ASTSimpleExpression).Token.Lexeme,
 			}
 		},
@@ -1105,7 +1121,8 @@ func NewGrammar() *Grammar {
 		RHS: []Symbol{Return, "Expr", SemicolonToken},
 		Action: func(ch []ASTNode) ASTNode {
 			return &ASTReturnNode{
-				Expr: ch[1],
+				Token: ch[0].(*ASTSimpleExpression).Token,
+				Expr:  ch[1],
 			}
 		},
 	})
