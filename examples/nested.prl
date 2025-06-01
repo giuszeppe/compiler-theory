@@ -6,3 +6,70 @@ fun a()->int{
 }
 let b:int = a();
 __print b;
+/*
+ Program node =>
+ New Block =>
+	 Function decl node => a : int
+		 Function params =>
+			 Formal params node =>
+		 Function block =>
+			 New Block =>
+				 If node =>
+					 Binary Op node => <
+						 Integer value:: 1
+						 Integer value:: 2
+					 New Block =>
+						 Return node =>
+							 Integer value:: 0
+			 Else Block =>
+				 Epsilon node
+			 Return node =>
+				 Integer value:: 1
+	Var decl node => b int
+		 Function call node => {Identifier a 7 9}
+			 Actual params node =>
+	 Builtin function node => __print
+		 Variable => b
+
+.main
+push #PC+3
+jmp
+halt
+push 2
+oframe
+push #PC+23
+jmp
+.a
+push 0
+alloc
+push 0
+oframe
+push 2
+push 1
+lt
+push #PC+4
+cjmp
+push #PC+8
+jmp
+push 0
+cframe
+ret
+cframe
+push #PC+3
+jmp
+cframe
+push 1
+ret
+push 0
+push .a
+call
+push 1
+push 0
+st
+push [1:0]
+print
+cframe
+halt
+
+
+*/

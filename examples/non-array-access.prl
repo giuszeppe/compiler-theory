@@ -1,0 +1,13 @@
+let i:int = 0;
+__print i[0];
+
+/*
+
+ Program node =>
+ New Block =>
+	Var decl node => i int
+		 Integer value:: 0
+	 Builtin function node => __print
+		 Variable => i
+Error: Trying to access offset of non-array: i (at line 2, column 3)
+*/

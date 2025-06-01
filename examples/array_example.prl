@@ -11,3 +11,153 @@
  list_of_integers[1] = 100000; // Change the second element
  let max:int = MaxInArray(list_of_integers);
  __print max;
+
+ /* AST
+  Program node =>
+  New Block =>
+ 	 Function decl node => MaxInArray : int
+ 		 Function params =>
+ 			 Formal params node =>
+ 				Var decl node => x int[8]
+ 					Expression node =>
+ 						 Epsilon node
+ 		 Function block =>
+ 			 New Block =>
+ 				Var decl node => m int
+ 					 Integer value:: 0
+ 				 For node =>
+ 					 For var decl =>
+ 						Var decl node => i int
+ 							 Integer value:: 0
+ 					 For condition =>
+ 						 Binary Op node => <
+ 							 Variable => i
+ 							 Integer value:: 8
+ 					 For increment =>
+ 						 Assignment node =>
+ 							 Variable => i
+ 							 Binary Op node => +
+ 								 Variable => i
+ 								 Integer value:: 1
+ 					 For block =>
+ 						 New Block =>
+ 							 If node =>
+ 								 Binary Op node => >
+ 									 Variable => x
+ 									 Variable => m
+ 								 New Block =>
+ 									 Assignment node =>
+ 										 Variable => m
+ 										 Variable => x
+ 						 Else Block =>
+ 							 Epsilon node
+ 				 Return node =>
+ 					 Variable => m
+ 		Var decl node => list_of_integers int[8]
+ 			 Array node =>
+ 				 Integer value:: 23
+ 				 Integer value:: 54
+ 				 Integer value:: 3
+ 				 Integer value:: 65
+ 				 Integer value:: 99
+ 				 Integer value:: 120
+ 				 Integer value:: 34
+ 				 Integer value:: 21
+ 		 Assignment node =>
+ 			 Variable => list_of_integers
+ 			 Integer value:: 100000
+ 		Var decl node => max int
+ 			 Function call node => {Identifier MaxInArray 12 10}
+ 				 Actual params node =>
+ 					 Variable => list_of_integers
+ 		 Builtin function node => __print
+ 			 Variable => max
+
+.main
+push #PC+3
+jmp
+halt
+push 10
+oframe
+push #PC+52
+jmp
+.MaxInArray
+push 9
+alloc
+push 0
+push 1
+push 0
+st
+push 1
+oframe
+push 0
+push 0
+push 0
+st
+push 8
+push [0:0]
+lt
+push #PC+4
+cjmp
+push #PC+29
+jmp
+push 0
+oframe
+push [1:2]
+push [0:1]
+push +[0:2]
+gt
+push #PC+4
+cjmp
+push #PC+10
+jmp
+push [0:1]
+push +[0:2]
+push 1
+push 2
+st
+cframe
+push #PC+3
+jmp
+cframe
+push 1
+push [0:0]
+add
+push 0
+push 0
+st
+push #PC-32
+jmp
+cframe
+push [1:0]
+ret
+push 21
+push 34
+push 120
+push 99
+push 65
+push 3
+push 54
+push 23
+push 8
+push 1
+push 0
+sta
+push 100000
+push 1
+push 0
+st
+push 8
+pusha [1:0]
+push 8
+push .MaxInArray
+call
+push 2
+push 0
+st
+push [2:0]
+print
+cframe
+halt
+
+*/

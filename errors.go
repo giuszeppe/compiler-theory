@@ -61,3 +61,7 @@ func ErrReturnTypeMismatch(expected, got any, tok Token) string {
 func ErrFunctionMustHaveReturn(tok Token) string {
 	return fmt.Sprintf("Function must have a return statement (at line %d, column %d)", tok.Line, tok.Column)
 }
+
+func ErrNotAnArray(tok Token) string {
+	return fmt.Sprintf("Trying to access offset of non array: %s (at line %d, column %d)", tok.Lexeme, tok.Line, tok.Column)
+}

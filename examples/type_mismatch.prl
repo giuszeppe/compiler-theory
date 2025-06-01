@@ -1,0 +1,14 @@
+let i:int = 0;
+i = 2.4; //Type mismatch!
+
+/*
+AST
+ Program node =>
+ New Block =>
+        Var decl node => i int
+                 Integer value:: 0
+         Assignment node =>
+                 Variable => i
+                 Float value:: 2.4
+Error: Type mismatch: expected int, got float (at line 2, column 1)
+*/

@@ -21,7 +21,7 @@ func main() {
 	program := string(content)
 
 	parser := NewParser(program)
-	//printVisitor := NewPrintNodesVisitor()
+	printVisitor := NewPrintNodesVisitor()
 	semanticVisitor := NewSemanticVisitor()
 	generatorVisitor := NewGeneratorVisitor()
 	grammar := NewGrammar()
@@ -30,11 +30,10 @@ func main() {
 		panic(err)
 	}
 
-	//node.Accept(printVisitor)
-
+	node.Accept(printVisitor)
 	node.Accept(semanticVisitor)
 	node.Accept(generatorVisitor)
-	for _, instr := range generatorVisitor.Instructions {
-		fmt.Println(instr)
-	}
+	//for _, instr := range generatorVisitor.Instructions {
+	//	fmt.Println(instr)
+	//}
 }

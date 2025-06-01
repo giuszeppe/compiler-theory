@@ -1,0 +1,17 @@
+fun a() -> int {
+		__print 0;
+}
+
+/*
+Program node =>
+ New Block =>         non-array-access.prl
+         Function decl node => a : int
+                 Function params =>
+                         Formal params node =>
+                 Function block =>
+                         New Block =>
+                                 Builtin function node => __print
+                                         Integer value:: 0
+
+Error: Function must have a return statement (at line 1, column 3)
+*/

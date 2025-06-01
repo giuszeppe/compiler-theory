@@ -68,7 +68,7 @@ func (v *SemanticVisitor) VisitIntegerNode(node *ASTIntegerNode) {
 }
 
 func (v *SemanticVisitor) VisitVariableNode(node *ASTVariableNode) {
-	_, ok := v.SymbolTable.Lookup(node.Token.Lexeme)
+	varDecl, ok := v.SymbolTable.Lookup(node.Token.Lexeme)
 	if !ok {
 		panic(ErrVariableNotDeclared(node.Token))
 	}
@@ -76,6 +76,14 @@ func (v *SemanticVisitor) VisitVariableNode(node *ASTVariableNode) {
 		offsetType := getExpressionType(node.Offset, *v.SymbolTable)
 		if offsetType != "int" {
 			panic(ErrInvalidOffsetType("int", offsetType, node.Token))
+		}
+		varDeclNode, ok := varDecl.(*ASTVarDeclNode)
+		if !ok {
+			panic(ErrNotVariableDeclaration(node.Token))
+		}
+		// check if type in variable declaration is an array
+		if !strings.Contains(varDeclNode.Type, "[") {
+			panic(ErrNotAnArray(node.Token))
 		}
 	}
 }
