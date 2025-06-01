@@ -49,6 +49,7 @@ func (s *GenStack[T]) Size() int {
 type GeneratorVisitor struct {
 	SymbolTable  *FrameStack
 	Instructions []string
+	DeepLevel    int
 }
 
 type SymbolGen struct {
@@ -137,9 +138,11 @@ func (v *GeneratorVisitor) VisitProgramNode(node *ASTProgramNode) {
 	v.emit("halt")
 }
 func (v *GeneratorVisitor) VisitBlockNode(node *ASTBlockNode) {
+	v.DeepLevel++
 	for _, stmt := range node.Stmts {
 		openFrameAndPopIfBlock(v, stmt)
 	}
+	v.DeepLevel--
 }
 
 func openFrameAndPopIfBlock(v *GeneratorVisitor, node ASTNode) {
@@ -251,6 +254,7 @@ func (v *GeneratorVisitor) getExpressionType(node ASTNode) string {
 
 // Functions node
 func (v *GeneratorVisitor) VisitFuncDeclNode(node *ASTFuncDeclNode) {
+	v.DeepLevel = -1 // function block is closed by ret
 	v.SymbolTable.Define(node.Name, node.ReturnType)
 	// push frame
 	skipFunctionBodyIdx := v.emit("push TBD")
@@ -357,6 +361,9 @@ func (v *GeneratorVisitor) VisitPrintNode(node *ASTPrintNode) {}
 func (v *GeneratorVisitor) VisitReturnNode(node *ASTReturnNode) {
 	Type := v.getExpressionType(node.Expr)
 	node.Expr.Accept(v)
+	for i := 0; i < v.DeepLevel; i++ {
+		v.emit("cframe")
+	}
 	if strings.Contains(Type, "[") {
 		itemNumber := Type[strings.Index(Type, "[")+1 : strings.LastIndex(Type, "]")]
 		v.emit("push " + itemNumber)

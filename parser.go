@@ -78,6 +78,7 @@ func (p *Parser) Parse(g *Grammar) (ASTNode, error) {
 			}
 			break
 		}
+		// Skip whitespace, newlines, and comments
 		if tokens[pos].Type == WhitespaceToken || tokens[pos].Type == NewLineToken || tokens[pos].Type == CommentSingleLine || tokens[pos].Type == CommentMultiLine {
 			pos++
 			continue
@@ -85,8 +86,9 @@ func (p *Parser) Parse(g *Grammar) (ASTNode, error) {
 
 		// look at innermost frame
 		topFrame := &stack[len(stack)-1]
+
+		// we’ve just completed a rule → reduce
 		if len(*topFrame) == 0 {
-			// we’ve just completed a rule → reduce
 			stack = stack[:len(stack)-1]
 			completed := astStack[len(astStack)-1]
 			astStack = astStack[:len(astStack)-1]
@@ -117,7 +119,7 @@ func (p *Parser) Parse(g *Grammar) (ASTNode, error) {
 			}
 			// consume it
 			*topFrame = (*topFrame)[1:]
-			// wrap token into a leaf AST node (you can change to ASTLiteralNode or similar)
+			// wrap token into a leaf AST node
 			leaf := &ASTSimpleExpression{Token: tok}
 			astStack[len(astStack)-1].children = append(astStack[len(astStack)-1].children, leaf)
 			pos++
