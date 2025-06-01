@@ -283,7 +283,6 @@ func (v *GeneratorVisitor) VisitFuncDeclNode(node *ASTFuncDeclNode) {
 	node.Block.Accept(v)
 
 	// pop frame, not needed since return node places it
-	// endIdx := v.emit("cframe")
 	v.Instructions[skipFunctionBodyIdx] = fmt.Sprint("push #PC+", len(v.Instructions)-skipFunctionBodyIdx)
 	v.SymbolTable.PopFrame()
 }
@@ -461,15 +460,8 @@ func (v *GeneratorVisitor) VisitTypeNode(node *ASTTypeNode) {}
 // ===== Declarations & Assignments =====
 func (v *GeneratorVisitor) VisitVarDeclNode(node *ASTVarDeclNode) {
 	// store value
-	// val, _ := v.SymbolTable.Frames.Peek()
-	// item := FrameItem{Type: node.Type, Node: node, IndexInFrame: len(val), LevelInSoF: 0}
 	var item SymbolGen
-	// if _, isArray := node.Expression.(*ASTArrayNode); isArray {
-	// 	// array declaration
-	// 	for i := len(node.Expression.(*ASTArrayNode).Items) - 1; i >= 0; i-- {
-	// 		item = v.SymbolTable.Define(node.Name+fmt.Sprintf("[%d]", i), node.Type)
-	// 	}
-	// }
+
 	item = v.SymbolTable.Define(node.Token.Lexeme, node.Type)
 	_, a, _ := v.SymbolTable.Resolve(node.Token.Lexeme)
 
@@ -540,11 +532,9 @@ func (v *GeneratorVisitor) VisitWhileNode(node *ASTWhileNode) {
 
 	exitLoopInstructionIdx := v.emit("push #TBD")
 	v.emit("jmp")
-	// previousInstructionCount := len(v.Instructions)
 
 	node.Block.Accept(v)
 
-	// blockCount := len(v.Instructions) - previousInstructionCount
 	v.emit("push " + fmt.Sprint(idxCondition)) // change to #PC+n where n is the number of instructions in the block to go back to the condition
 	v.emit("jmp")
 	endIdx := v.emit("cframe")
@@ -641,7 +631,7 @@ func CountVarDecls(node ASTNode) int {
 			count += CountVarDecls(stmt)
 		}
 		return count
-	case *ASTVarDeclNode: // sottile bug se lasci la possibilita di avere array con meno elementi di quelli dichiarati
+	case *ASTVarDeclNode:
 		if arr, ok := node.Expression.(*ASTArrayNode); ok {
 			return len(arr.Items)
 		}

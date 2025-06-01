@@ -12,75 +12,74 @@ func TestAllTokenTypes(t *testing.T) {
 		expected Token
 	}{
 		// Identifiers
-		{"abc", Token{Identifier, "abc"}},
-		{"_temp1", Token{Identifier, "_temp1"}},
+		{"abc", Token{Type: Identifier, Lexeme: "abc"}},
+		{"_temp1", Token{Type: Identifier, Lexeme: "_temp1"}},
 
 		// Numbers
-		{"123", Token{Integer, "123"}},
-		{"#ab12cf", Token{HexNumber, "#ab12cf"}},
-		{"12.3", Token{Float, "12.3"}},
+		{"123", Token{Type: Integer, Lexeme: "123"}},
+		{"#ab12cf", Token{Type: HexNumber, Lexeme: "#ab12cf"}},
+		{"12.3", Token{Type: Float, Lexeme: "12.3"}},
 
 		// Whitespace
-		{" ", Token{Whitespace, " "}},
-		{"\n", Token{NewLineToken, "\n"}},
-		{"\t", Token{Whitespace, "\t"}},
+		{" ", Token{Type: Whitespace, Lexeme: " "}},
+		{"\n", Token{Type: NewLineToken, Lexeme: "\n"}},
+		{"\t", Token{Type: Whitespace, Lexeme: "\t"}},
 
 		// Symbols
-		{"=", Token{Equals, "="}},
-		{";", Token{SemicolonToken, ";"}},
-		{"(", Token{LeftParenToken, "("}},
-		{")", Token{RightParenToken, ")"}},
+		{"=", Token{Type: Equals, Lexeme: "="}},
+		{";", Token{Type: SemicolonToken, Lexeme: ";"}},
+		{"(", Token{Type: LeftParenToken, Lexeme: "("}},
+		{")", Token{Type: RightParenToken, Lexeme: ")"}},
 		// Operators
-		{"+", Token{PlusToken, "+"}},
-		{"-", Token{MinusToken, "-"}},
-		{"*", Token{StarToken, "*"}},
-		{"/", Token{SlashToken, "/"}},
-		{"and", Token{AndToken, "and"}},
-		{"or", Token{OrToken, "or"}},
-		{"not", Token{NotToken, "not"}},
+		{"+", Token{Type: PlusToken, Lexeme: "+"}},
+		{"-", Token{Type: MinusToken, Lexeme: "-"}},
+		{"*", Token{Type: StarToken, Lexeme: "*"}},
+		{"/", Token{Type: SlashToken, Lexeme: "/"}},
+		{"and", Token{Type: AndToken, Lexeme: "and"}},
+		{"or", Token{Type: OrToken, Lexeme: "or"}},
+		{"not", Token{Type: NotToken, Lexeme: "not"}},
 
-		{":", Token{ColonToken, ":"}},
-		{",", Token{CommaToken, ","}},
-		{"{", Token{LeftCurlyToken, "{"}},
-		{"}", Token{RightCurlyToken, "}"}},
+		{":", Token{Type: ColonToken, Lexeme: ":"}},
+		{",", Token{Type: CommaToken, Lexeme: ","}},
+		{"{", Token{Type: LeftCurlyToken, Lexeme: "{"}},
+		{"}", Token{Type: RightCurlyToken, Lexeme: "}"}},
 
 		// Relational Operators
-		{"<", Token{RelOpToken, "<"}},
-		{">", Token{RelOpToken, ">"}},
-		{"!=", Token{RelOpToken, "!="}},
-		{"==", Token{RelOpToken, "=="}},
-		{">=", Token{RelOpToken, ">="}},
-		{"<=", Token{RelOpToken, "<="}},
+		{"<", Token{Type: RelOpToken, Lexeme: "<"}},
+		{">", Token{Type: RelOpToken, Lexeme: ">"}},
+		{"!=", Token{Type: RelOpToken, Lexeme: "!="}},
+		{"==", Token{Type: RelOpToken, Lexeme: "=="}},
+		{">=", Token{Type: RelOpToken, Lexeme: ">="}},
+		{"<=", Token{Type: RelOpToken, Lexeme: "<="}},
 
 		// Arrow
-		{"->", Token{LeftArrowToken, "->"}},
+		{"->", Token{Type: LeftArrowToken, Lexeme: "->"}},
 
 		// Keywords
-		{"let", Token{Let, "let"}},
-		{"return", Token{Return, "return"}},
-		{"as", Token{As, "as"}},
-		{"true", Token{True, "true"}},
-		{"false", Token{False, "false"}},
+		{"let", Token{Type: Let, Lexeme: "let"}},
+		{"return", Token{Type: Return, Lexeme: "return"}},
+		{"as", Token{Type: As, Lexeme: "as"}},
+		{"true", Token{Type: True, Lexeme: "true"}},
+		{"false", Token{Type: False, Lexeme: "false"}},
 
 		// Types
-		{"int", Token{IntType, "int"}},
-		{"float", Token{FloatType, "float"}},
-		{"bool", Token{BoolType, "bool"}},
-		{"colour", Token{ColourType, "colour"}},
+		{"int", Token{Type: IntType, Lexeme: "int"}},
+		{"float", Token{Type: FloatType, Lexeme: "float"}},
+		{"bool", Token{Type: BoolType, Lexeme: "bool"}},
+		{"colour", Token{Type: ColourType, Lexeme: "colour"}},
 
-		{"//comment and dw", Token{CommentSingleLine, "//comment and dw"}},
-		{"/* comment and dw */", Token{CommentMultiLine, "/* comment and dw */"}},
-		{"/* comment and dw *", Token{CommentMultiLine, "/* comment and dw *"}},
-		{"/* comment and dw ", Token{CommentMultiLine, "/* comment and dw "}},
+		{"//comment and dw", Token{Type: CommentSingleLine, Lexeme: "//comment and dw"}},
+		{"/* comment and dw */", Token{Type: CommentMultiLine, Lexeme: "/* comment and dw */"}},
+		{"/* comment and dw *", Token{Type: CommentMultiLine, Lexeme: "/* comment and dw *"}},
+		{"/* comment and dw ", Token{Type: CommentMultiLine, Lexeme: "/* comment and dw "}},
 		{`/* comment and dw
-            ez ez ez
-            `, Token{CommentMultiLine, `/* comment and dw
-            ez ez ez
-            `}},
-		{"[", Token{LeftBracketToken, "["}},
-		{"]", Token{RightBracketToken, "]"}},
+                       ez ez ez
+                       `, Token{Type: CommentMultiLine, Lexeme: `/* comment and dw
+                       ez ez ez
+                       `}},
+		{"[", Token{Type: LeftBracketToken, Lexeme: "["}},
+		{"]", Token{Type: RightBracketToken, Lexeme: "]"}},
 	}
-
 	for _, test := range tests {
 		tokens := lexer.GenerateTokens(test.input)
 		if len(tokens) == 0 {

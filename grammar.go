@@ -5,13 +5,6 @@ import (
 	"strconv"
 )
 
-type OpList struct {
-	Pairs []struct {
-		Op    string
-		Right ASTNode
-	}
-}
-
 func NewGrammar() *Grammar {
 	g := &Grammar{
 		StartSymbol: "Program",

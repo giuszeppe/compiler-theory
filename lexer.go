@@ -553,21 +553,6 @@ func (l *Lexer) getTokenTypeByFinalState(state int, lexeme string) Token {
 		}
 		return Token{Type: Identifier, Lexeme: lexeme}
 
-	// case StateArrayType:
-	// 	if strings.HasPrefix(lexeme, "int") {
-	// 		return Token{IntType, lexeme}
-	// 	}
-	// 	if strings.HasPrefix(lexeme, "bool") {
-	// 		return Token{BoolType, lexeme}
-	// 	}
-	// 	if strings.HasPrefix(lexeme, "float") {
-	// 		return Token{FloatType, lexeme}
-	// 	}
-	// 	if strings.HasPrefix(lexeme, "colour") {
-	// 		return Token{ColourType, lexeme}
-	// 	}
-	// 	return Token{Error, lexeme}
-
 	case StateRelOpExtended:
 		if lexeme == "->" {
 			return Token{Type: LeftArrowToken, Lexeme: lexeme}

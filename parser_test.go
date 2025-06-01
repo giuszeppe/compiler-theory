@@ -34,7 +34,7 @@ func assertASTNodeEqual(t *testing.T, expected, actual ASTNode) {
 		assertASTNodeEqual(t, e.Expr, a.Expr)
 	case *ASTVariableNode:
 		a := actual.(*ASTVariableNode)
-		if e.Token != a.Token {
+		if e.Token.Lexeme != a.Token.Lexeme {
 			t.Fatalf("AST variable tokens are not equal: expected %v, got %v", e.Token, a.Token)
 		}
 	case *ASTIntegerNode:
@@ -44,8 +44,8 @@ func assertASTNodeEqual(t *testing.T, expected, actual ASTNode) {
 		}
 	case *ASTVarDeclNode:
 		a := actual.(*ASTVarDeclNode)
-		if e.Name != a.Name {
-			t.Fatalf("AST variable declaration names are not equal: expected %s, got %s", e.Name, a.Name)
+		if e.Token.Lexeme != a.Token.Lexeme {
+			t.Fatalf("AST variable declaration names are not equal: expected %s, got %s", e.Token.Lexeme, a.Token.Lexeme)
 		}
 		if e.Type != a.Type {
 			t.Fatalf("AST variable declaration types are not equal: expected %s, got %s", e.Type, a.Type)
@@ -58,8 +58,8 @@ func assertASTNodeEqual(t *testing.T, expected, actual ASTNode) {
 		}
 	case *ASTFuncDeclNode:
 		a := actual.(*ASTFuncDeclNode)
-		if e.Name != a.Name {
-			t.Fatalf("AST function names are not equal: expected %s, got %s", e.Name, a.Name)
+		if e.Token.Lexeme != a.Token.Lexeme {
+			t.Fatalf("AST function names are not equal: expected %s, got %s", e.Token.Lexeme, a.Token.Lexeme)
 		}
 		if e.ReturnType != a.ReturnType {
 			t.Fatalf("AST function return types are not equal: expected %s, got %s", e.ReturnType, a.ReturnType)
@@ -94,8 +94,8 @@ func assertASTNodeEqual(t *testing.T, expected, actual ASTNode) {
 		}
 	case *ASTFuncCallNode:
 		a := actual.(*ASTFuncCallNode)
-		if e.Name != a.Name {
-			t.Fatalf("AST function call names are not equal: expected %s, got %s", e.Name, a.Name)
+		if e.Name.Lexeme != a.Name.Lexeme {
+			t.Fatalf("AST function call names are not equal: expected %s, got %s", e.Name.Lexeme, a.Name.Lexeme)
 		}
 		assertASTNodeEqual(t, e.Params, a.Params)
 	case *ASTBinaryOpNode:
@@ -189,7 +189,7 @@ func TestParsingIntVariableDeclaration(t *testing.T) {
 	expectedAST := &ASTProgramNode{
 		Block: ASTBlockNode{Stmts: []ASTNode{
 			&ASTVarDeclNode{
-				Name:       "x",
+				Token:      Token{Type: Identifier, Lexeme: "x"},
 				Type:       "int",
 				Expression: &ASTIntegerNode{Value: 2},
 			},
@@ -211,7 +211,7 @@ func TestParsingFunctionDeclaration(t *testing.T) {
 	expectedAST := &ASTProgramNode{
 		Block: ASTBlockNode{Stmts: []ASTNode{
 			&ASTFuncDeclNode{
-				Name:       "main",
+				Token:      Token{Type: Identifier, Lexeme: "main"},
 				ReturnType: "int",
 				Params: &ASTFormalParamsNode{
 					Params: []ASTNode{
@@ -222,12 +222,12 @@ func TestParsingFunctionDeclaration(t *testing.T) {
 				Block: &ASTBlockNode{
 					Stmts: []ASTNode{
 						&ASTAssignmentNode{
-							Id: ASTVariableNode{Token: Token{Identifier, "a"}},
+							Id: ASTVariableNode{Token: Token{Type: Identifier, Lexeme: "a"}},
 
 							Expr: &ASTBinaryOpNode{
-								Left:     &ASTVariableNode{Token: Token{Identifier, "a"}},
+								Left:     &ASTVariableNode{Token: Token{Type: Identifier, Lexeme: "a"}},
 								Operator: "+",
-								Right:    &ASTVariableNode{Token: Token{Identifier, "b"}},
+								Right:    &ASTVariableNode{Token: Token{Type: Identifier, Lexeme: "b"}},
 							},
 						},
 					},
@@ -320,13 +320,13 @@ func TestParsingNestedBlocks(t *testing.T) {
 	expectedAST := &ASTProgramNode{
 		Block: ASTBlockNode{Stmts: []ASTNode{
 			&ASTVarDeclNode{
-				Name:       "x",
+				Token:      Token{Type: Identifier, Lexeme: "x"},
 				Type:       "int",
 				Expression: &ASTIntegerNode{Value: 5},
 			},
 			&ASTBlockNode{Stmts: []ASTNode{
 				&ASTVarDeclNode{
-					Name:       "y",
+					Token:      Token{Type: Identifier, Lexeme: "y"},
 					Type:       "int",
 					Expression: &ASTIntegerNode{Value: 10},
 				},
@@ -351,7 +351,7 @@ func TestParsingFunctionCall(t *testing.T) {
 			&ASTAssignmentNode{
 				Id: ASTVariableNode{Token: Token{Type: Identifier, Lexeme: "result"}},
 				Expr: &ASTFuncCallNode{
-					Name: "add",
+					Name: Token{Type: Identifier, Lexeme: "add"},
 					Params: &ASTActualParamsNode{
 						Params: []ASTNode{
 							&ASTIntegerNode{Value: 3},
@@ -415,7 +415,7 @@ func TestParsingUnaryInputOnFunctionCall(t *testing.T) {
 				Expr: &ASTUnaryOpNode{
 					Operator: "-",
 					Operand: &ASTFuncCallNode{
-						Name: "add",
+						Name: Token{Type: Identifier, Lexeme: "add"},
 						Params: &ASTActualParamsNode{
 							Params: []ASTNode{
 								&ASTIntegerNode{Value: 3},
@@ -663,8 +663,8 @@ func TestParsingArrVarDecl(t *testing.T) {
 	expectedAST := &ASTProgramNode{
 		Block: ASTBlockNode{Stmts: []ASTNode{
 			&ASTVarDeclNode{
-				Name: "list_of_integers",
-				Type: "int[5]",
+				Token: Token{Type: Identifier, Lexeme: "list_of_integers"},
+				Type:  "int[5]",
 				Expression: &ASTArrayNode{
 					Type: "int[5]",
 					Items: []ASTNode{
@@ -696,8 +696,8 @@ func TestParsingArrDeclarationWithoutArrSize(t *testing.T) {
 	expectedAST := &ASTProgramNode{
 		Block: ASTBlockNode{Stmts: []ASTNode{
 			&ASTVarDeclNode{
-				Name: "list_of_integers",
-				Type: "int[3]",
+				Token: Token{Type: Identifier, Lexeme: "list_of_integers"},
+				Type:  "int[3]",
 				Expression: &ASTArrayNode{
 					Type: "int[3]",
 					Items: []ASTNode{
