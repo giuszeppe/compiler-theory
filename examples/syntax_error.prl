@@ -1,0 +1,7 @@
+let i:int = 0; // Syntax error
+// let i:int = 0; // Correct syntax
+__print 10;
+for(let x:int = 0; x < 10;) { // Syntax error
+    __print 10;
+}
+

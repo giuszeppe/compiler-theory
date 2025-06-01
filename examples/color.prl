@@ -1,0 +1,21 @@
+fun color() -> colour
+{
+    return  (16777215 - __random_int(16777215)) as colour;
+}
+
+fun cc(x:int, y:int) -> bool
+{
+    __print x;
+    __print y;
+
+    let c:colour = color();
+    let h:int = __random_int(__height);
+    let w:int = __random_int(__width);
+    __write w,h,c;
+
+    return true;
+}
+
+let a:bool = cc(0, 0);
+__print a;
+__delay 1000;

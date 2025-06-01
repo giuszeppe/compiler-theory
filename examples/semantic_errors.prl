@@ -1,0 +1,10 @@
+let i:int= 4.2 as int; // Error: Type mismatch, expected int but got float
+fun add(x:int, y:int) -> int { // Error: Function return type mismatch
+   return 2.0 as int;
+}
+fun add2() -> int { // Error: No return  statement in function
+  return 5;
+}
+let x:int = 0;  // Error: Variable 'i' already declared
+//__print b(); // Error: Function 'b' not defined
+__print l;
