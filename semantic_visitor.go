@@ -70,12 +70,12 @@ func (v *SemanticVisitor) VisitIntegerNode(node *ASTIntegerNode) {
 func (v *SemanticVisitor) VisitVariableNode(node *ASTVariableNode) {
 	_, ok := v.SymbolTable.Lookup(node.Token.Lexeme)
 	if !ok {
-		panic(ErrVariableNotDeclared(node.Token.Lexeme))
+		panic(ErrVariableNotDeclared(node.Token))
 	}
 	if _, isEpsilon := node.Offset.(*ASTEpsilon); !isEpsilon {
 		offsetType := getExpressionType(node.Offset, *v.SymbolTable)
 		if offsetType != "int" {
-			panic(ErrInvalidOffsetType("int", offsetType))
+			panic(ErrInvalidOffsetType("int", offsetType, node.Token))
 		}
 	}
 }
@@ -97,11 +97,11 @@ func getExpressionType(node ASTNode, symbolTable SymbolTable) string {
 		}
 		val, ok := symbolTable.Lookup(variableNode.Token.Lexeme)
 		if !ok {
-			panic(ErrVariableNotDeclared(variableNode.Token.Lexeme))
+			panic(ErrVariableNotDeclared(variableNode.Token))
 		}
 		varDeclNode, ok := val.(*ASTVarDeclNode)
 		if !ok {
-			panic(ErrNotVariableDeclaration(variableNode.Token.Lexeme))
+			panic(ErrNotVariableDeclaration(variableNode.Token))
 		}
 		if _, isEpsilon := variableNode.Offset.(*ASTEpsilon); !isEpsilon {
 			itemType := varDeclNode.Type[:strings.Index(varDeclNode.Type, "[")]
@@ -130,12 +130,12 @@ func getExpressionType(node ASTNode, symbolTable SymbolTable) string {
 		}
 		funcDeclNode, ok := val.(*ASTFuncDeclNode)
 		if !ok {
-			panic(ErrNotVariableDeclaration(n.Name))
+			panic(ErrNotVariableDeclaration(funcDeclNode.Token))
 		}
 		formalParamsNode, _ := funcDeclNode.Params.(*ASTFormalParamsNode)
 		actualParamsNode, _ := n.Params.(*ASTActualParamsNode)
 		if len(actualParamsNode.Params) != len(formalParamsNode.Params) {
-			panic(ErrArgumentCountMismatch(len(formalParamsNode.Params), len(actualParamsNode.Params)))
+			panic(ErrArgumentCountMismatch(len(formalParamsNode.Params), len(actualParamsNode.Params), funcDeclNode.Name))
 		}
 		for i, param := range actualParamsNode.Params {
 			paramType := getExpressionType(param, symbolTable)
@@ -162,7 +162,7 @@ func getExpressionType(node ASTNode, symbolTable SymbolTable) string {
 		switch n.Name {
 		case "__random_int":
 			if len(n.Args) != 1 {
-				panic(ErrArgumentCountMismatch(1, len(n.Args)))
+				panic(ErrArgumentCountMismatch(1, len(n.Args), n.Name))
 			}
 			argType := getExpressionType(n.Args[0], symbolTable)
 			if argType != "int" {
@@ -171,7 +171,7 @@ func getExpressionType(node ASTNode, symbolTable SymbolTable) string {
 			return "int"
 		case "__delay":
 			if len(n.Args) != 1 {
-				panic(ErrArgumentCountMismatch(1, len(n.Args)))
+				panic(ErrArgumentCountMismatch(1, len(n.Args), n.Name))
 			}
 			argType := getExpressionType(n.Args[0], symbolTable)
 			if argType != "int" {
@@ -182,7 +182,7 @@ func getExpressionType(node ASTNode, symbolTable SymbolTable) string {
 			return "int"
 		case "__write":
 			if len(n.Args) != 3 {
-				panic(ErrArgumentCountMismatch(3, len(n.Args)))
+				panic(ErrArgumentCountMismatch(3, len(n.Args), n.Name))
 			}
 			arg1Type := getExpressionType(n.Args[0], symbolTable)
 			arg2Type := getExpressionType(n.Args[1], symbolTable)
@@ -199,11 +199,11 @@ func getExpressionType(node ASTNode, symbolTable SymbolTable) string {
 			return ""
 		case "__print":
 			if len(n.Args) != 1 {
-				panic(ErrArgumentCountMismatch(1, len(n.Args)))
+				panic(ErrArgumentCountMismatch(1, len(n.Args), n.Name))
 			}
 		case "__write_box":
 			if len(n.Args) != 5 {
-				panic(ErrArgumentCountMismatch(5, len(n.Args)))
+				panic(ErrArgumentCountMismatch(5, len(n.Args), n.Name))
 			}
 			arg1Type := getExpressionType(n.Args[0], symbolTable)
 			arg2Type := getExpressionType(n.Args[1], symbolTable)
@@ -228,7 +228,7 @@ func getExpressionType(node ASTNode, symbolTable SymbolTable) string {
 			return "int"
 		case "__read":
 			if len(n.Args) != 2 {
-				panic(ErrArgumentCountMismatch(2, len(n.Args)))
+				panic(ErrArgumentCountMismatch(2, len(n.Args), n.Name))
 			}
 			arg1Type := getExpressionType(n.Args[0], symbolTable)
 			arg2Type := getExpressionType(n.Args[1], symbolTable)
@@ -251,16 +251,16 @@ func getExpressionType(node ASTNode, symbolTable SymbolTable) string {
 func (v *SemanticVisitor) VisitAssignmentNode(node *ASTAssignmentNode) {
 	val, ok := v.SymbolTable.Lookup(node.Id.Token.Lexeme)
 	if !ok {
-		panic(ErrVariableNotDeclared(node.Id.Token.Lexeme))
+		panic(ErrVariableNotDeclared(node.Id.Token))
 	}
 	varDeclNode, ok := val.(*ASTVarDeclNode)
 	if !ok {
-		panic(ErrNotVariableDeclaration(node.Id.Token.Lexeme))
+		panic(ErrNotVariableDeclaration(node.Id.Token))
 	}
 	if _, isEpsilon := node.Id.Offset.(*ASTEpsilon); !isEpsilon {
 		offsetType := getExpressionType(node.Id.Offset, *v.SymbolTable)
 		if offsetType != "int" {
-			panic(ErrInvalidOffsetType("int", offsetType))
+			panic(ErrInvalidOffsetType("int", offsetType, node.Id.Token))
 		}
 		if getExpressionType(node.Expr, *v.SymbolTable) != varDeclNode.Type[:strings.Index(varDeclNode.Type, "[")] {
 			panic(ErrTypeMismatch(varDeclNode.Type[:strings.Index(varDeclNode.Type, "[")], getExpressionType(node.Expr, *v.SymbolTable)))
@@ -446,7 +446,7 @@ func (v *SemanticVisitor) VisitFormalParamNode(node *ASTFormalParamNode) {
 
 func (v *SemanticVisitor) VisitFuncDeclNode(node *ASTFuncDeclNode) {
 	if _, ok := v.SymbolTable.Lookup(node.Name); ok {
-		panic(ErrFunctionAlreadyDeclared(node.Name))
+		panic(ErrFunctionAlreadyDeclared(node.Name, node.Token))
 	}
 
 	v.SymbolTable.Insert(node.Name, node)
@@ -458,7 +458,7 @@ func (v *SemanticVisitor) VisitFuncDeclNode(node *ASTFuncDeclNode) {
 	funcBlock, _ := node.Block.(*ASTBlockNode)
 	hasReturn := hasReturnStatement(funcBlock, v, node.ReturnType)
 	if !hasReturn {
-		panic(ErrFunctionMustHaveReturn())
+		panic(ErrFunctionMustHaveReturn(node.Name))
 	}
 }
 

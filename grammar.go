@@ -713,6 +713,7 @@ func NewGrammar() *Grammar {
 				retType += "[" + ch[7].(*ASTSimpleExpression).Token.Lexeme + "]"
 			}
 			return &ASTFuncDeclNode{
+				Token:      ch[1].(*ASTSimpleExpression).Token,
 				Name:       ch[1].(*ASTSimpleExpression).Token.Lexeme,
 				Params:     ch[3],
 				ReturnType: retType,

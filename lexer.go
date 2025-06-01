@@ -7,6 +7,8 @@ import (
 type Token struct {
 	Type   TokenType
 	Lexeme string
+	Line   int `default:"1"`
+	Column int `default:"1"`
 }
 
 type TokenType int
@@ -305,7 +307,7 @@ var charCategoryMap = map[byte]string{
 }
 
 func NewToken(t TokenType, lexeme string) Token {
-	return Token{t, lexeme}
+	return Token{t, lexeme, 1, 1}
 }
 
 type Lexer struct {
@@ -315,10 +317,14 @@ type Lexer struct {
 	Rows       int
 	Cols       int
 	Tx         [][]int
+	Line       int
+	Column     int
 }
 
 func NewLexer() Lexer {
 	lexer := Lexer{
+		Line:   1,
+		Column: 1,
 		LexemeMap: map[string]int{
 			"_":            Underscore,
 			"letter":       Letter,
@@ -473,49 +479,49 @@ func (l *Lexer) isAcceptingState(state int) bool {
 func getKeywordTokenByLexeme(lexeme string) (Token, bool) {
 	switch lexeme {
 	case "return":
-		return Token{Return, lexeme}, true
+		return Token{Type: Return, Lexeme: lexeme}, true
 	case "let":
-		return Token{Let, lexeme}, true
+		return Token{Type: Let, Lexeme: lexeme}, true
 	case "as":
-		return Token{As, lexeme}, true
+		return Token{Type: As, Lexeme: lexeme}, true
 	case "true":
-		return Token{True, lexeme}, true
+		return Token{Type: True, Lexeme: lexeme}, true
 	case "false":
-		return Token{False, lexeme}, true
+		return Token{Type: False, Lexeme: lexeme}, true
 	case "if":
-		return Token{If, lexeme}, true
+		return Token{Type: If, Lexeme: lexeme}, true
 	case "else":
-		return Token{Else, lexeme}, true
+		return Token{Type: Else, Lexeme: lexeme}, true
 	case "while":
-		return Token{While, lexeme}, true
+		return Token{Type: While, Lexeme: lexeme}, true
 	case "for":
-		return Token{For, lexeme}, true
+		return Token{Type: For, Lexeme: lexeme}, true
 	case "fun":
-		return Token{Fun, lexeme}, true
+		return Token{Type: Fun, Lexeme: lexeme}, true
 	case "__print":
-		return Token{Print, lexeme}, true
+		return Token{Type: Print, Lexeme: lexeme}, true
 	case "__delay":
-		return Token{Delay, lexeme}, true
+		return Token{Type: Delay, Lexeme: lexeme}, true
 	case "__write":
-		return Token{Write, lexeme}, true
+		return Token{Type: Write, Lexeme: lexeme}, true
 	case "__write_box":
-		return Token{WriteBox, lexeme}, true
+		return Token{Type: WriteBox, Lexeme: lexeme}, true
 	case "__width":
-		return Token{PadWidth, lexeme}, true
+		return Token{Type: PadWidth, Lexeme: lexeme}, true
 	case "__height":
-		return Token{PadHeight, lexeme}, true
+		return Token{Type: PadHeight, Lexeme: lexeme}, true
 	case "__read":
-		return Token{PadRead, lexeme}, true
+		return Token{Type: PadRead, Lexeme: lexeme}, true
 	case "__random_int":
-		return Token{PadRandI, lexeme}, true
+		return Token{Type: PadRandI, Lexeme: lexeme}, true
 	case "__clear":
-		return Token{ClearToken, lexeme}, true
+		return Token{Type: ClearToken, Lexeme: lexeme}, true
 	case "and":
-		return Token{AndToken, lexeme}, true
+		return Token{Type: AndToken, Lexeme: lexeme}, true
 	case "or":
-		return Token{OrToken, lexeme}, true
+		return Token{Type: OrToken, Lexeme: lexeme}, true
 	case "not":
-		return Token{NotToken, lexeme}, true
+		return Token{Type: NotToken, Lexeme: lexeme}, true
 	default:
 		return Token{}, false
 	}
@@ -524,13 +530,13 @@ func getKeywordTokenByLexeme(lexeme string) (Token, bool) {
 func getTypeTokenByLexeme(lexeme string) (Token, bool) {
 	switch lexeme {
 	case "colour":
-		return Token{ColourType, lexeme}, true
+		return Token{Type: ColourType, Lexeme: lexeme}, true
 	case "int":
-		return Token{IntType, lexeme}, true
+		return Token{Type: IntType, Lexeme: lexeme}, true
 	case "bool":
-		return Token{BoolType, lexeme}, true
+		return Token{Type: BoolType, Lexeme: lexeme}, true
 	case "float":
-		return Token{FloatType, lexeme}, true
+		return Token{Type: FloatType, Lexeme: lexeme}, true
 	default:
 		return Token{}, false
 	}
@@ -545,7 +551,7 @@ func (l *Lexer) getTokenTypeByFinalState(state int, lexeme string) Token {
 		if tok, ok := getTypeTokenByLexeme(lexeme); ok {
 			return tok
 		}
-		return Token{Identifier, lexeme}
+		return Token{Type: Identifier, Lexeme: lexeme}
 
 	// case StateArrayType:
 	// 	if strings.HasPrefix(lexeme, "int") {
@@ -564,14 +570,14 @@ func (l *Lexer) getTokenTypeByFinalState(state int, lexeme string) Token {
 
 	case StateRelOpExtended:
 		if lexeme == "->" {
-			return Token{LeftArrowToken, lexeme}
+			return Token{Type: LeftArrowToken, Lexeme: lexeme}
 		}
 	}
 
 	if tokenType, ok := finalStateToTokenType[state]; ok {
-		return Token{tokenType, lexeme}
+		return Token{Type: tokenType, Lexeme: lexeme}
 	}
-	return Token{Error, lexeme}
+	return Token{Type: Error, Lexeme: lexeme}
 }
 
 func (l *Lexer) isEndOfInput(src string, idx int) bool {
@@ -605,9 +611,11 @@ func (l *Lexer) NextToken(src string, idx int) (Token, string) {
 	state := 0
 	stack := []int{-2}
 	lexeme := ""
+	startLine := l.Line
+	startColumn := l.Column
 
 	if l.isEndOfInput(src, idx) {
-		return Token{Type: End, Lexeme: "end"}, "end"
+		return Token{Type: End, Lexeme: "end", Line: l.Line, Column: l.Column}, "end"
 	}
 
 	for state != -1 {
@@ -651,12 +659,15 @@ func (l *Lexer) NextToken(src string, idx int) (Token, string) {
 	}
 
 	if syntaxError {
-		return Token{Type: Error, Lexeme: lexeme}, lexeme
+		return Token{Type: Error, Lexeme: lexeme, Line: startLine, Column: startColumn}, lexeme
 	}
 	if l.isAcceptingState(state) {
-		return l.getTokenTypeByFinalState(state, lexeme), lexeme
+		token := l.getTokenTypeByFinalState(state, lexeme)
+		token.Line = startLine
+		token.Column = startColumn
+		return token, lexeme
 	}
-	return Token{Type: Error, Lexeme: lexeme}, lexeme
+	return Token{Type: Error, Lexeme: lexeme, Line: startLine, Column: startColumn}, lexeme
 }
 
 func (l *Lexer) GenerateTokens(src string) []Token {
@@ -667,6 +678,13 @@ func (l *Lexer) GenerateTokens(src string) []Token {
 	tokens = append(tokens, token)
 
 	for token.Type != End {
+		// Track line/column
+		if token.Type == NewLineToken {
+			l.Line++
+			l.Column = 1
+		} else {
+			l.Column++
+		}
 		idx += len(lexeme)
 		token, lexeme = l.NextToken(src, idx)
 		tokens = append(tokens, token)

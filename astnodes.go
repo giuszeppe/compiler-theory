@@ -215,6 +215,7 @@ func (n *ASTFormalParamsNode) Accept(visitor ASTVisitor) {
 }
 
 type ASTFuncDeclNode struct {
+	Token      Token
 	Name       string
 	ReturnType string
 	Params     ASTNode

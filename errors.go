@@ -2,8 +2,8 @@ package main
 
 import "fmt"
 
-func ErrVariableNotDeclared(name string) string {
-	return fmt.Sprintf("Variable not declared: %s", name)
+func ErrVariableNotDeclared(tok Token) string {
+	return fmt.Sprintf("Variable not declared: %s (at line %d, column %d)", tok.Lexeme, tok.Line, tok.Column)
 }
 
 func ErrVariableAlreadyDeclared(name string) string {
@@ -14,28 +14,28 @@ func ErrTypeMismatch(expected, got any) string {
 	return fmt.Sprintf("Type mismatch: expected %v, got %v", expected, got)
 }
 
-func ErrInvalidOffsetType(expected, got string) string {
-	return fmt.Sprintf("Invalid offset type: expected %s, got %s", expected, got)
+func ErrInvalidOffsetType(expected, got string, tok Token) string {
+	return fmt.Sprintf("Invalid offset type: expected %s, got %s (at line %d, column %d)", expected, got, tok.Line, tok.Column)
 }
 
-func ErrNotVariableDeclaration(name string) string {
-	return fmt.Sprintf("Not a variable declaration: %s", name)
+func ErrNotVariableDeclaration(tok Token) string {
+	return fmt.Sprintf("Not a variable declaration: %s (at line %d, column %d)", tok.Lexeme, tok.Line, tok.Column)
 }
 
 func ErrFunctionNotDeclared(name string) string {
 	return fmt.Sprintf("Function not declared: %s", name)
 }
 
-func ErrFunctionAlreadyDeclared(name string) string {
-	return fmt.Sprintf("Function already declared: %s", name)
+func ErrFunctionAlreadyDeclared(name string, tok Token) string {
+	return fmt.Sprintf("Function already declared: %s (at line %d, column %d)", name, tok.Line, tok.Column)
 }
 
 func ErrParameterAlreadyDeclared(name string) string {
 	return fmt.Sprintf("Parameter already declared: %s", name)
 }
 
-func ErrArgumentCountMismatch(expected, got int) string {
-	return fmt.Sprintf("Argument count mismatch: expected %d, got %d", expected, got)
+func ErrArgumentCountMismatch(expected, got int, name string) string {
+	return fmt.Sprintf("Argument count mismatch: expected %d, got %d (at func %s)", expected, got, name)
 }
 
 func ErrInvalidColorValue(value string) string {
@@ -58,6 +58,6 @@ func ErrReturnTypeMismatch(expected, got any) string {
 	return fmt.Sprintf("Return type mismatch: expected %v, got %v", expected, got)
 }
 
-func ErrFunctionMustHaveReturn() string {
-	return "Function must have a return statement"
+func ErrFunctionMustHaveReturn(name string) string {
+	return fmt.Sprintf("Function must have a return statement at function %s", name)
 }
